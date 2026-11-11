@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# model weights (download manually, see README)
+*.pth
+*.onnx
+*.safetensors
+*.ckpt
+*.pt
+*.bin
+
+.DS_Store
+Thumbs.db
