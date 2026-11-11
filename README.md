@@ -26,6 +26,10 @@ The nodes attempt to download missing model files on first use. DWPose requires 
 
 This node is an **input alignment** step rather than a general resizer. It brings an image and its mask to dimensions divisible by a chosen multiple, using one shared geometry for both. It loads no model weights, needs no network access, and is fully deterministic.
 
+![ComfyUI workflow using Time・Res Fixer](docs/res-fixer-workflow.jpg)
+
+*Workflow example: an 1801×1011 image and its mask are aligned to 1824×1024 with `round_to_multiple = 32`; the image and mask outputs stay pixel-aligned.*
+
 ### Dimensions
 
 `target = ceil(original / round_to_multiple) * round_to_multiple` — sizes only grow, never shrink, by at most `multiple - 1` pixels. Available multiples: `2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`.
@@ -95,6 +99,10 @@ Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正�
 ## 节点详解：Time・Res Fixer (Img/Mask)
 
 这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中最轻量、最稳定的一环。
+
+![ComfyUI 中的 Time・Res Fixer 工作流](docs/res-fixer-workflow.jpg)
+
+*工作流示例：1801×1011 的图像与遮罩经 `round_to_multiple = 32` 对齐为 1824×1024，输出的图像与遮罩保持像素级对齐。*
 
 ### 尺寸规则
 
