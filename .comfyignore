@@ -1,0 +1,3 @@
+# Kept in git but excluded from the Comfy Registry archive
+docs/
+.gitignore

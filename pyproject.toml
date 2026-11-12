@@ -1,0 +1,19 @@
+[project]
+name = "time-image"
+version = "1.0.0"
+description = "Standalone ComfyUI nodes for image/mask resolution fitting, pose extraction, and depth extraction."
+requires-python = ">=3.10"
+# Core nodes only need torch / numpy / Pillow, which ComfyUI already provides.
+# Optional: onnxruntime (DWPose), huggingface_hub (model auto-download).
+# Never list torch here: pip may replace ComfyUI's CUDA build with a CPU wheel.
+dependencies = []
+# license = { file = "LICENSE" }  # enable once a root LICENSE / third-party notice is ready
+
+[project.urls]
+Repository = "https://github.com/shiguanggougouo/Time-image"
+"Bug Tracker" = "https://github.com/shiguanggougouo/Time-image/issues"
+
+[tool.comfy]
+PublisherId = ""  # TODO: publisher id from https://registry.comfy.org (the part after @)
+DisplayName = "Time image"
+requires-comfyui = ">=1.0.0"
