@@ -4,7 +4,7 @@ __pycache__/
 .venv/
 venv/
 
-# model weights (download manually, see README)
+# No model files are part of this package; keep any local weights out of git.
 *.pth
 *.onnx
 *.safetensors

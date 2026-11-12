@@ -1,14 +1,12 @@
 [project]
 name = "time-image"
-version = "1.0.1"
-description = "Standalone ComfyUI nodes for image/mask resolution fitting, pose extraction, and depth extraction."
+version = "2.0.0"
+description = "A single dependency-free ComfyUI node that aligns an image and mask to divisible dimensions."
 requires-python = ">=3.10"
-# Core nodes only need torch / numpy / Pillow, which ComfyUI already provides.
-# Optional: onnxruntime (DWPose), huggingface_hub (model auto-download).
+# Only numpy / torch / Pillow are needed, all already provided by ComfyUI.
 # Never list torch here: pip may replace ComfyUI's CUDA build with a CPU wheel.
 dependencies = []
-# Mixed licensing: original code is MIT, bundled OpenPose code is CMU
-# non-commercial research only. See LICENSE and NOTICE.md before any use.
+# The whole package is original code under MIT; no third-party code is bundled.
 license = { file = "LICENSE" }
 
 [project.urls]

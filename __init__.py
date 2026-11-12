@@ -4,19 +4,6 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
-import os
-from contextlib import nullcontext
-
-import comfy.model_management as mm
-from comfy.utils import ProgressBar, load_torch_file
-import folder_paths
-from .depth_anything_v2.dpt import DepthAnythingV2
-import sys
-
-# Keep the detector implementation local to this custom-node package.
-_PACKAGE_DIR = os.path.dirname(os.path.abspath(__file__))
-if _PACKAGE_DIR not in sys.path:
-    sys.path.insert(0, _PACKAGE_DIR)
 
 
 _RESAMPLING = {
@@ -73,7 +60,7 @@ def _fit_mask(mask, target_width, target_height, fit, resized_width, resized_hei
 
 
 class ImageMaskResolutionFixer:
-    """Time AI node: resize image and mask together to divisible dimensions."""
+    """Time image node: resize image and mask together to divisible dimensions."""
 
     @classmethod
     def INPUT_TYPES(cls):
@@ -169,111 +156,10 @@ class ImageMaskResolutionFixer:
         return (image_out, mask_out, target_w, target_h)
 
 
-class TimeImageLoadDepthModel:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"model": (["depth_anything_v2_vits_fp16.safetensors", "depth_anything_v2_vitb_fp16.safetensors", "depth_anything_v2_vitl_fp16.safetensors"], {"default": "depth_anything_v2_vitl_fp16.safetensors"})}}
-
-    RETURN_TYPES = ("TIMEIMAGE_DEPTH_MODEL",)
-    FUNCTION = "load"
-    CATEGORY = "Time AI/图像"
-
-    def load(self, model):
-        from huggingface_hub import hf_hub_download
-        enc = "vits" if "vits" in model else "vitb" if "vitb" in model else "vitl"
-        features, channels = {"vits": (64, [48,96,192,384]), "vitb": (128,[96,192,384,768]), "vitl": (256,[256,512,1024,1024])}[enc]
-        path = os.path.join(folder_paths.models_dir, "Time-image", "depth", model)
-        os.makedirs(os.path.dirname(path), exist_ok=True)
-        if not os.path.exists(path):
-            hf_hub_download("Kijai/DepthAnythingV2-safetensors", model, local_dir=os.path.dirname(path))
-        net = DepthAnythingV2(encoder=enc, features=features, out_channels=channels)
-        net.load_state_dict(load_torch_file(path), strict=False)
-        net.eval()
-        return ({"model": net, "dtype": torch.float16},)
-
-
-class TimeImageDepth:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {"model": ("TIMEIMAGE_DEPTH_MODEL",), "image": ("IMAGE",)}}
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "process"
-    CATEGORY = "Time AI/图像"
-
-    def process(self, model, image):
-        device = mm.get_torch_device()
-        net = model["model"].to(device)
-        outs = []
-        for frame in image:
-            x = frame.permute(2,0,1).unsqueeze(0).to(device)
-            h,w=x.shape[-2:]
-            h14,w14=max(14,h-h%14),max(14,w-w%14)
-            x=F.interpolate(x,size=(h14,w14),mode="bilinear",align_corners=False)
-            x=(x-torch.tensor([.485,.456,.406],device=device).view(1,3,1,1))/torch.tensor([.229,.224,.225],device=device).view(1,3,1,1)
-            with torch.no_grad(), torch.autocast(mm.get_autocast_device(device), dtype=torch.float16):
-                d=net(x)
-            d=F.interpolate(d.float(),size=(h,w),mode="bilinear",align_corners=False)
-            d=(d-d.amin())/(d.amax()-d.amin()+1e-8)
-            outs.append(d[0,0].cpu().unsqueeze(-1).expand(-1,-1,3))
-        return (torch.stack(outs).float(),)
-
-
-class TimePoseExtract:
-    @classmethod
-    def INPUT_TYPES(cls):
-        return {"required": {
-            "image": ("IMAGE",),
-            "method": (["DWPose", "OpenPose"], {"default": "DWPose"}),
-            "detect_body": (["enable", "disable"], {"default": "enable"}),
-            "detect_hands": (["enable", "disable"], {"default": "enable"}),
-            "detect_face": (["enable", "disable"], {"default": "enable"}),
-            "resolution": ("INT", {"default": 512, "min": 128, "max": 2048, "step": 64}),
-        }}
-
-    RETURN_TYPES = ("IMAGE",)
-    FUNCTION = "extract"
-    CATEGORY = "Time AI/图像"
-
-    def extract(self, image, method, detect_body, detect_hands, detect_face, resolution):
-        os.environ["AUX_ANNOTATOR_CKPTS_PATH"] = os.path.join(folder_paths.models_dir, "Time-image", "pose")
-        from custom_controlnet_aux.open_pose import OpenposeDetector
-        from custom_controlnet_aux.dwpose import DwposeDetector
-        import numpy as np
-        dev = mm.get_torch_device()
-        if method == "OpenPose":
-            detector = OpenposeDetector.from_pretrained().to(dev)
-        else:
-            detector = DwposeDetector.from_pretrained(
-                "yzd-v/DWPose", "yzd-v/DWPose", det_filename="yolox_l.onnx",
-                pose_filename="dw-ll_ucoco_384.onnx", torchscript_device=dev)
-        outputs = []
-        for frame in image:
-            arr = (frame.detach().cpu().numpy().clip(0, 1) * 255).astype(np.uint8)
-            result = detector(arr, detect_resolution=resolution,
-                include_body=detect_body == "enable",
-                include_hand=detect_hands == "enable",
-                include_face=detect_face == "enable", output_type="np")
-            outputs.append(torch.from_numpy(np.asarray(result).copy()).float() / 255.0)
-        del detector
-        return (torch.stack(outputs).to(image.device),)
-
-
-AUTHOR = "Time AI"
-
-
 NODE_CLASS_MAPPINGS = {
     "ImageMaskResolutionFixer": ImageMaskResolutionFixer,
-    "TimeImageLoadDepthModel": TimeImageLoadDepthModel,
-    "TimeImageDepth": TimeImageDepth,
-    "TimePoseExtract": TimePoseExtract,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageMaskResolutionFixer": "Time・Res Fixer (Img/Mask)",
-    "TimeImageLoadDepthModel": "Time Depth Model Loader",
-    "TimeImageDepth": "Time Depth Extractor",
-    "TimePoseExtract": "Time Pose Extractor",
 }
-
-

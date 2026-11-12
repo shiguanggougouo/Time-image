@@ -1,26 +1,24 @@
 # Time image
 
-Standalone ComfyUI nodes for image/mask resolution fitting, pose extraction, and depth extraction. The pose backend is bundled locally and does not invoke another node package.
+A single, dependency-free ComfyUI node: **Time・Res Fixer (Img/Mask)** aligns an image and its optional mask to dimensions divisible by a chosen multiple, then outputs the resulting width and height as integers for downstream nodes.
 
-## Nodes
-- **Time・Res Fixer (Img/Mask)** — fit an image and optional mask to a divisible canvas.
-- **Time Pose Extractor** — OpenPose or DWPose, with body, hand, and face switches.
-- **Time Depth Model Loader** and **Time Depth Extractor** — load Depth Anything V2 and generate depth maps.
+No model weights, no downloads, no network access, no extra Python packages — only `numpy`, `torch` and `Pillow`, which ComfyUI already provides. The entire package is MIT-licensed.
+
+## Node
+
+- **Time・Res Fixer (Img/Mask)** — fit an image and optional mask to a divisible canvas, keeping both pixel-aligned.
 
 ## Installation
-Copy the `Time-image` folder into `ComfyUI/custom_nodes/` and restart ComfyUI.
 
-## Manual model files
-All models are stored under `ComfyUI/models/Time-image/`, split into `pose/` and `depth/`.
+- In ComfyUI Manager, search for `Time image` (Comfy Registry), or use **Install via Git URL** with `https://github.com/shiguanggougouo/Time-image`.
+- From the command line: `comfy node registry-install time-image`.
+- Or copy the `Time-image` folder into `ComfyUI/custom_nodes/` and restart ComfyUI.
 
-### Pose models
-- From [lllyasviel/Annotators](https://huggingface.co/lllyasviel/Annotators), download OpenPose files `body_pose_model.pth`, `hand_pose_model.pth`, and `facenet.pth`. Place them in `ComfyUI/models/Time-image/pose/lllyasviel/Annotators/`.
-- From [yzd-v/DWPose](https://huggingface.co/yzd-v/DWPose), download `yolox_l.onnx` and `dw-ll_ucoco_384.onnx`. Place them in `ComfyUI/models/Time-image/pose/yzd-v/DWPose/`.
+No model files need to be downloaded.
 
-### Depth models
-From [Kijai/DepthAnythingV2-safetensors](https://huggingface.co/Kijai/DepthAnythingV2-safetensors), download one supported file: `depth_anything_v2_vits_fp16.safetensors`, `depth_anything_v2_vitb_fp16.safetensors`, or `depth_anything_v2_vitl_fp16.safetensors`. Place it in `ComfyUI/models/Time-image/depth/`.
+## What changed in 2.0.0
 
-The nodes attempt to download missing model files on first use. DWPose requires ONNX Runtime. This package bundles third-party code under mixed licenses; see [License](#license) before any commercial use.
+The pose extraction nodes (OpenPose / DWPose) and the depth extraction nodes (Depth Anything V2) were removed, together with all bundled third-party code and automatic model downloads. Workflows that used `Time Pose Extractor`, `Time Depth Model Loader` or `Time Depth Extractor` need to replace those nodes. The package is now one lightweight node under a plain MIT license, with no non-commercial restrictions.
 
 ## Time・Res Fixer (Img/Mask) in detail
 
@@ -35,7 +33,7 @@ This node is an **input alignment** step rather than a general resizer. It bring
 `target = ceil(original / round_to_multiple) * round_to_multiple` — sizes only grow, never shrink, by at most `multiple - 1` pixels. Available multiples: `2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`.
 
 - `8 / 32 / 64` match VAE and latent downsampling (SD 1.5 / SDXL).
-- `14 / 28` match the patch-14 grid used internally by the bundled Depth Anything V2 node, so no pixels get cropped away downstream.
+- `14 / 28` match the patch-14 grid used by Depth Anything / DINO-family models, so no pixels get cropped away downstream.
 - `2` is enough when only even dimensions are required.
 
 ### Fit modes
@@ -70,41 +68,37 @@ The node validates `IMAGE` as `[B,H,W,C]` with 1, 3 or 4 channels and `MASK` as 
 - `smart_fill` mirrors mask edges into the padded area. If a mask touches the canvas edge and must stay exact, use `letterbox` instead.
 - `letterbox` is always centered black padding; there is no custom pad colour, pad position or arbitrary target resolution.
 
-**Quick picks:** SD/SDXL latent → `8` or `64`; Depth Anything / DINO → `14` or `28`; even dimensions only → `2`. For general use, `lanczos` + `smart_fill` is a good default.
+**Quick picks:** SD/SDXL latent → `8` or `64`; Depth Anything / DINO-family models → `14` or `28`; even dimensions only → `2`. For general use, `lanczos` + `smart_fill` is a good default.
 
 ## License
 
-The original Time image code is MIT-licensed, but the package also bundles third-party code: CMU OpenPose (noncommercial research use only), DWPose (the same CMU terms) and Depth Anything V2 / DINOv2 (Apache-2.0). Because of the CMU components, **the bundled package may only be used for noncommercial research**. Commercial use requires removing or replacing those components, or obtaining written permission from Carnegie Mellon University.
-
-See [`LICENSE`](LICENSE) for the full terms and [`NOTICE.md`](NOTICE.md) for the third-party attribution table. Model weights are not included and carry their own upstream licenses.
+MIT — see [`LICENSE`](LICENSE). This package contains only original code: no third-party code and no model weights are bundled, so it may be used commercially.
 
 # Time image（中文说明）
 
-Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正、骨骼图提取和深度图提取。骨骼检测代码随本包提供，不调用其它节点包。
+Time image 是一个独立的 ComfyUI 节点包，只提供 **Time・Res Fixer (Img/Mask)**：把图像与可选遮罩按同一套几何对齐到指定倍数的尺寸，并以整数输出最终宽高给下游节点。
+
+不加载模型权重、不下载文件、不联网、不需要额外 Python 包 —— 只依赖 ComfyUI 自带的 `numpy`、`torch` 和 `Pillow`。整个包采用 MIT 许可。
 
 ## 节点
-- **Time・Res Fixer (Img/Mask)**：将图像和可选遮罩调整到指定倍数的画布尺寸。
-- **Time Pose Extractor**：选择 OpenPose 或 DWPose，并可分别启用或关闭身体、手部和脸部检测。
-- **Time Depth Model Loader** 与 **Time Depth Extractor**：加载 Depth Anything V2 并生成深度图。
+
+- **Time・Res Fixer (Img/Mask)**：将图像和可选遮罩调整到指定倍数的画布尺寸，两路输出保持像素级对齐。
 
 ## 安装
-将 `Time-image` 文件夹复制到 `ComfyUI/custom_nodes/`，然后重启 ComfyUI。
 
-## 手动下载模型
-所有模型统一放在 `ComfyUI/models/Time-image/`，并分为 `pose/` 和 `depth/` 两个子目录。
+- 在 ComfyUI Manager 中搜索 `Time image`（Comfy Registry），或用 **Install via Git URL** 填 `https://github.com/shiguanggougouo/Time-image`。
+- 命令行：`comfy node registry-install time-image`。
+- 或将 `Time-image` 文件夹复制到 `ComfyUI/custom_nodes/`，然后重启 ComfyUI。
 
-### 骨骼模型
-- 从 [lllyasviel/Annotators](https://huggingface.co/lllyasviel/Annotators) 下载 OpenPose 文件：`body_pose_model.pth`、`hand_pose_model.pth` 和 `facenet.pth`。放入 `ComfyUI/models/Time-image/pose/lllyasviel/Annotators/`。
-- 从 [yzd-v/DWPose](https://huggingface.co/yzd-v/DWPose) 下载 `yolox_l.onnx` 和 `dw-ll_ucoco_384.onnx`。放入 `ComfyUI/models/Time-image/pose/yzd-v/DWPose/`。
+无需下载任何模型文件。
 
-### 深度模型
-从 [Kijai/DepthAnythingV2-safetensors](https://huggingface.co/Kijai/DepthAnythingV2-safetensors) 下载以下任意一个文件：`depth_anything_v2_vits_fp16.safetensors`、`depth_anything_v2_vitb_fp16.safetensors` 或 `depth_anything_v2_vitl_fp16.safetensors`。放入 `ComfyUI/models/Time-image/depth/`。
+## 2.0.0 的变化
 
-缺少模型时节点会尝试在首次使用时自动下载。DWPose 需要 ONNX Runtime。本包含多种许可的第三方代码，商用前请先阅读下方[许可](#许可)一节。
+姿态提取节点（OpenPose / DWPose）与深度提取节点（Depth Anything V2）已移除，随包附带的第三方代码和模型自动下载逻辑也一并删除。曾使用 `Time Pose Extractor`、`Time Depth Model Loader` 或 `Time Depth Extractor` 的工作流需要改用其它节点替代。现在整个包是一个轻量单节点、纯 MIT 许可，不再有非商业限制。
 
 ## 节点详解：Time・Res Fixer (Img/Mask)
 
-这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中最轻量、最稳定的一环。
+这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中唯一、也是最轻量稳定的一环。
 
 ![ComfyUI 中的 Time・Res Fixer 工作流](docs/res-fixer-workflow.jpg)
 
@@ -115,7 +109,7 @@ Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正�
 `目标尺寸 = ceil(原尺寸 / round_to_multiple) × round_to_multiple`，**只增不减**，最多比原图多出 `倍数 - 1` 像素。可选倍数：`2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`。
 
 - `8 / 32 / 64` 对应 VAE 与 latent 下采样（SD 1.5 / SDXL）。
-- `14 / 28` 对应本包 Depth Anything V2 内部按 patch 14 裁切的网格，提前对齐可以避免下游悄悄裁掉像素。
+- `14 / 28` 对应 Depth Anything / DINO 系模型按 patch 14 裁切的网格，提前对齐可以避免下游悄悄裁掉像素。
 - 只需要偶数尺寸时，`2` 就够。
 
 ### 四种 fit 模式
@@ -150,10 +144,8 @@ Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正�
 - `smart_fill` 会把遮罩边缘镜像到补边区域；若遮罩贴着画布边缘且要求精确，改用 `letterbox`。
 - `letterbox` 固定为居中黑边，暂不支持自定义填充颜色、填充位置或任意目标分辨率。
 
-**参数速选**：SD/SDXL latent 用 `8` 或 `64`；Depth Anything / DINO 系用 `14` 或 `28`；只需偶数用 `2`。常规出图推荐 `lanczos` + `smart_fill`。
+**参数速选**：SD/SDXL latent 用 `8` 或 `64`；Depth Anything / DINO 系模型用 `14` 或 `28`；只需偶数用 `2`。常规出图推荐 `lanczos` + `smart_fill`。
 
 ## 许可
 
-本项目中由作者原创的代码采用 MIT 许可，但分发包内同时包含第三方代码：CMU OpenPose（仅限非商业研究使用）、DWPose（同样受 CMU 条款约束）以及 Depth Anything V2 / DINOv2（Apache-2.0）。由于包含 CMU 组件，**整个分发包仅可用于非商业研究**；如需商用，必须先移除或替换这些组件，或取得 Carnegie Mellon University 的书面许可。
-
-完整条款见 [`LICENSE`](LICENSE)，第三方归属清单见 [`NOTICE.md`](NOTICE.md)。模型权重不包含在仓库中，其使用需遵守各自上游许可。
+MIT 许可，完整条款见 [`LICENSE`](LICENSE)。本包只含原创代码，不含第三方代码，也不附带模型权重，可用于商业用途。
