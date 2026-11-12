@@ -20,7 +20,7 @@ All models are stored under `ComfyUI/models/Time-image/`, split into `pose/` and
 ### Depth models
 From [Kijai/DepthAnythingV2-safetensors](https://huggingface.co/Kijai/DepthAnythingV2-safetensors), download one supported file: `depth_anything_v2_vits_fp16.safetensors`, `depth_anything_v2_vitb_fp16.safetensors`, or `depth_anything_v2_vitl_fp16.safetensors`. Place it in `ComfyUI/models/Time-image/depth/`.
 
-The nodes attempt to download missing model files on first use. DWPose requires ONNX Runtime. OpenPose code retains its upstream non-commercial license; review the license before commercial use.
+The nodes attempt to download missing model files on first use. DWPose requires ONNX Runtime. This package bundles third-party code under mixed licenses; see [License](#license) before any commercial use.
 
 ## Time・Res Fixer (Img/Mask) in detail
 
@@ -72,6 +72,12 @@ The node validates `IMAGE` as `[B,H,W,C]` with 1, 3 or 4 channels and `MASK` as 
 
 **Quick picks:** SD/SDXL latent → `8` or `64`; Depth Anything / DINO → `14` or `28`; even dimensions only → `2`. For general use, `lanczos` + `smart_fill` is a good default.
 
+## License
+
+The original Time image code is MIT-licensed, but the package also bundles third-party code: CMU OpenPose (noncommercial research use only), DWPose (the same CMU terms) and Depth Anything V2 / DINOv2 (Apache-2.0). Because of the CMU components, **the bundled package may only be used for noncommercial research**. Commercial use requires removing or replacing those components, or obtaining written permission from Carnegie Mellon University.
+
+See [`LICENSE`](LICENSE) for the full terms and [`NOTICE.md`](NOTICE.md) for the third-party attribution table. Model weights are not included and carry their own upstream licenses.
+
 # Time image（中文说明）
 
 Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正、骨骼图提取和深度图提取。骨骼检测代码随本包提供，不调用其它节点包。
@@ -94,7 +100,7 @@ Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正�
 ### 深度模型
 从 [Kijai/DepthAnythingV2-safetensors](https://huggingface.co/Kijai/DepthAnythingV2-safetensors) 下载以下任意一个文件：`depth_anything_v2_vits_fp16.safetensors`、`depth_anything_v2_vitb_fp16.safetensors` 或 `depth_anything_v2_vitl_fp16.safetensors`。放入 `ComfyUI/models/Time-image/depth/`。
 
-缺少模型时节点会尝试在首次使用时自动下载。DWPose 需要 ONNX Runtime。OpenPose 上游代码带有非商业许可，商用前请查看许可条款。
+缺少模型时节点会尝试在首次使用时自动下载。DWPose 需要 ONNX Runtime。本包含多种许可的第三方代码，商用前请先阅读下方[许可](#许可)一节。
 
 ## 节点详解：Time・Res Fixer (Img/Mask)
 
@@ -145,3 +151,9 @@ Time image 是一组独立的 ComfyUI 节点，提供图像/遮罩尺寸修正�
 - `letterbox` 固定为居中黑边，暂不支持自定义填充颜色、填充位置或任意目标分辨率。
 
 **参数速选**：SD/SDXL latent 用 `8` 或 `64`；Depth Anything / DINO 系用 `14` 或 `28`；只需偶数用 `2`。常规出图推荐 `lanczos` + `smart_fill`。
+
+## 许可
+
+本项目中由作者原创的代码采用 MIT 许可，但分发包内同时包含第三方代码：CMU OpenPose（仅限非商业研究使用）、DWPose（同样受 CMU 条款约束）以及 Depth Anything V2 / DINOv2（Apache-2.0）。由于包含 CMU 组件，**整个分发包仅可用于非商业研究**；如需商用，必须先移除或替换这些组件，或取得 Carnegie Mellon University 的书面许可。
+
+完整条款见 [`LICENSE`](LICENSE)，第三方归属清单见 [`NOTICE.md`](NOTICE.md)。模型权重不包含在仓库中，其使用需遵守各自上游许可。
