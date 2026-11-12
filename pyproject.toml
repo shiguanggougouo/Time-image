@@ -14,6 +14,6 @@ Repository = "https://github.com/shiguanggougouo/Time-image"
 "Bug Tracker" = "https://github.com/shiguanggougouo/Time-image/issues"
 
 [tool.comfy]
-PublisherId = ""  # TODO: publisher id from https://registry.comfy.org (the part after @)
+PublisherId = "timeai1024"
 DisplayName = "Time image"
 requires-comfyui = ">=1.0.0"
