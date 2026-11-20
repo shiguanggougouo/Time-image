@@ -1,239 +1,108 @@
 # Time image
 
-Two lightweight, dependency-free ComfyUI nodes in one pack:
+Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本 **2.1.0**。下面按节点顺序说明：先介绍提示词、参考图与分辨率一体节点，再介绍图像和遮罩对齐节点。
 
-- **Time・Prompt + Images + Resolution** — write a prompt, drop in reference images and choose the output size, all in one node. New in 2.1.0.
-- **Time・Res Fixer (Img/Mask)** — align an image and its optional mask to dimensions divisible by a chosen multiple, then output the resulting width and height as integers for downstream nodes.
-
-No model weights, no downloads, no network access, no extra Python packages — only `numpy`, `torch` and `Pillow`, which ComfyUI already provides. The entire package is MIT-licensed.
-
-## Nodes
-
-| Node | What it is for |
-| --- | --- |
-| `Time・Prompt + Images + Resolution` | One-stop prompt + up to 10 reference images + width/height for image-editing and multi-image workflows. |
-| `Time・Res Fixer (Img/Mask)` | Fit an image and optional mask to a divisible canvas, keeping both pixel-aligned. |
-
-## Installation
-
-- In ComfyUI Manager, search for `Time image` (Comfy Registry), or use **Install via Git URL** with `https://github.com/shiguanggougouo/Time-image`.
-- From the command line: `comfy node registry-install time-image`.
-- Or copy the `Time-image` folder into `ComfyUI/custom_nodes/` and restart ComfyUI.
-
-No model files need to be downloaded. Restart ComfyUI after installing so the new front-end extension is loaded.
-
-## Quick start: Time・Prompt + Images + Resolution
-
-![The Prompt + Images + Resolution node in ComfyUI](docs/prompt-image-resolution.png)
-
-*Example: two reference photos enabled, a prompt built with `<Picture 1>` / `<Picture 2>` chips, 1:1 with a 1024 px shortest edge → `1024 × 1024` (1.05 MP). The green line shows the live result.*
-
-**In one sentence:** it replaces three separate bits of plumbing — writing a prompt, attaching reference images, and setting the output size — with a single node. It is especially handy for "replace the character in Picture 1 with the one in Picture 2" style prompts for models that understand `<Picture N>` markers.
-
-### Your first workflow in four steps
-
-1. **Write the prompt.** Type `@` to pick an imported image; it inserts a `<Picture N>` chip with a thumbnail. Plain `@图1` text is converted to the same marker automatically.
-2. **Tick `Images`.** Drag files onto the node or press `+` (up to 10). Each thumbnail can be enabled, replaced or deleted; `image_1` … `image_N` output sockets appear as images are added.
-3. **Tick `Resolution`.** Pick an aspect ratio plus **Side pixels** (with a shortest/longest edge rule) or **Megapixels**, and an alignment multiple of `OFF / 8 / 16 / 32 / 64`. The green line previews the final MP and size. **Use Image 1 resolution** copies the first image's size instead.
-4. **Wire the outputs:** `width` / `height` → Empty Latent Image or any size input; `prompt` → CLIP Text Encode; `image_N` → the image inputs of your model.
-
-### Outputs
-
-| Output | Type | Notes |
+| 顺序 | 节点 | 适合做什么 |
 | --- | --- | --- |
-| `width`, `height` | `INT` | Final size, already aligned to the chosen multiple. |
-| `prompt` | `STRING` | Your text with `<Picture N>` markers preserved. |
-| `image_1` … `image_10` | `IMAGE` | Sockets are added/removed dynamically to match the enabled images; unused slots are empty. |
+| 1 | **Time・Prompt + Images + Resolution**（中文界面：Time・提示词 + 图像 + 分辨率） | 写提示词、放参考图、设置生成尺寸。 |
+| 2 | **Time・Res Fixer (Img/Mask)** | 将已有图像和可选遮罩对齐到指定倍数的尺寸。 |
 
-### Resolution rules
-
-- **Side pixels:** the chosen value applies to the shortest or longest edge; the other edge follows the aspect ratio. Presets run from 512 to 4096, or type any value from 64 to 16384.
-- **Megapixels:** `w = sqrt(MP × 1,000,000 × ratio)`, `h = w / ratio`, where `ratio = width / height`.
-- Both modes round to the nearest multiple (minimum one multiple); `OFF` rounds to whole pixels. Example: 1:1 at a 1024 px shortest edge, aligned to 32 → `1024 × 1024` = 1.05 MP.
-- **Image panel:** "Align all images to multiple" runs the bundled Res Fixer (`smart_fill` + `lanczos`) on every enabled image; "Limit image max edge" only shrinks oversized images, never enlarges small ones.
-
-### Good to know
-
-- Images are uploaded through ComfyUI's own upload endpoint into `ComfyUI/input/time_image/` — no manual file copying, no external services.
-- `<Picture N>` is a **text marker** in the prompt output, not an automatic image binding. Connect the matching `image_N` socket yourself.
-- The node starts minimal: only the prompt and two toggles are visible; the image and resolution panels stay hidden until ticked.
-- With `Resolution` off it falls back to 1024 × 1024; images are only loaded when that feature is enabled.
-
-## What changed
-
-- **2.1.0** — added the `Time・Prompt + Images + Resolution` node, its web front-end (`web/`) and English/Chinese UI translations (`locales/`). Existing Res Fixer workflows are unaffected.
-- **2.0.0** — removed the pose extraction nodes (OpenPose / DWPose) and depth extraction nodes (Depth Anything V2), together with all bundled third-party code and automatic model downloads. Workflows that used `Time Pose Extractor`, `Time Depth Model Loader` or `Time Depth Extractor` need to replace those nodes. The package became a lightweight, plain-MIT node pack with no non-commercial restrictions.
-
-## Time・Res Fixer (Img/Mask) in detail
-
-This node is an **input alignment** step rather than a general resizer. It brings an image and its mask to dimensions divisible by a chosen multiple, using one shared geometry for both. It loads no model weights, needs no network access, and is fully deterministic.
-
-![ComfyUI workflow using Time・Res Fixer](docs/res-fixer-workflow.jpg)
-
-*Workflow example: an 1801×1011 image and its mask are aligned to 1824×1024 with `round_to_multiple = 32`; the image and mask outputs stay pixel-aligned.*
-
-### Dimensions
-
-`target = ceil(original / round_to_multiple) * round_to_multiple` — sizes only grow, never shrink, by at most `multiple - 1` pixels. Available multiples: `2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`.
-
-- `8 / 32 / 64` match VAE and latent downsampling (SD 1.5 / SDXL).
-- `14 / 28` match the patch-14 grid used by Depth Anything / DINO-family models, so no pixels get cropped away downstream.
-- `2` is enough when only even dimensions are required.
-
-### Fit modes
-
-| `fit` | Scaling | Handling the remainder | Result |
-| --- | --- | --- | --- |
-| `smart_fill` (default) | Proportional, `min` scale | Mirror padding, equivalent to OpenCV `BORDER_REFLECT_101` (edge pixel not repeated) | No black bars, no distortion |
-| `letterbox` | Proportional, `min` scale | Center padding with `0` | Full composition, black bars |
-| `crop` | Proportional, `max` scale | Center crop | Full bleed, edge content lost |
-| `fill` | Direct stretch to target | None | Slight aspect distortion |
-
-Example: a 1000×600 image aligned to 64 becomes 1024×640; proportional scaling gives 1024×614, and the missing 26 pixels of height are filled with mirrored content.
-
-### Image and mask stay aligned
-
-- The image uses one of six PIL filters (`lanczos` by default, plus `bicubic`, `hamming`, `bilinear`, `box`, `nearest`); the mask always uses `nearest`, so binary edges and soft mask values are preserved instead of being blurred into intermediate grey.
-- Scaling, cropping and padding share exactly the same coordinates on both paths. In `smart_fill` the mask is mirrored too, in `letterbox` it is padded with `0`, and in `crop` it is cropped at the same center.
-- A single mask is broadcast across the whole image batch; a mismatched batch count raises a clear error. If the mask resolution differs from the image, it is first resampled to the image size with `nearest`.
-- With no mask connected, the node returns an all-zero mask (`0` means unselected in ComfyUI), so all four outputs are always available and the chain never breaks.
-
-### Outputs and behaviour
-
-`image`, `mask`, `width` (`INT`), `height` (`INT`). The integer width and height can be wired straight into Empty Latent Image, KSampler or upscale nodes, so downstream resolution follows the input automatically.
-
-The node validates `IMAGE` as `[B,H,W,C]` with 1, 3 or 4 channels and `MASK` as `[B,H,W]`, and whitelists `fit` / `method`. Grayscale is handled as PIL `L` and restored to a channel dimension; RGBA works too. Output dtype and device follow the inputs (fp16 / bf16 / GPU tensors pass through), and `ascontiguousarray` plus `detach()` keep the tensors clean.
-
-### Limitations
-
-- It only pads upward; it cannot scale an image down to a fixed resolution such as 512.
-- Frames pass through `uint8` quantization (`round(x*255)`), so results are not bit-exact.
-- Resampling runs per frame on the CPU via PIL: 4K inputs, large batches or video are slower, with a GPU↔CPU round trip.
-- `smart_fill` mirrors mask edges into the padded area. If a mask touches the canvas edge and must stay exact, use `letterbox` instead.
-- `letterbox` is always centered black padding; there is no custom pad colour, pad position or arbitrary target resolution.
-
-**Quick picks:** SD/SDXL latent → `8` or `64`; Depth Anything / DINO-family models → `14` or `28`; even dimensions only → `2`. For general use, `lanczos` + `smart_fill` is a good default.
-
-## License
-
-MIT — see [`LICENSE`](LICENSE). This package contains only original code: no third-party code and no model weights are bundled, so it may be used commercially.
-
-# Time image（中文说明）
-
-Time image 是一个独立的 ComfyUI 节点包，提供两个轻量节点：
-
-- **Time・提示词 + 图像 + 分辨率**（2.1.0 新增）：提示词、参考图、输出尺寸在一个节点里一次搞定。
-- **Time・Res Fixer (Img/Mask)**：把图像与可选遮罩按同一套几何对齐到指定倍数，并以整数输出最终宽高给下游节点。
-
-不加载模型权重、不下载文件、不联网、不需要额外 Python 包 —— 只依赖 ComfyUI 自带的 `numpy`、`torch` 和 `Pillow`。整个包采用 MIT 许可，可商用。
-
-## 节点
-
-| 节点 | 用途 |
-| --- | --- |
-| `Time・提示词 + 图像 + 分辨率` | 提示词 + 最多 10 张参考图 + 宽高，一次设置完成，适合多图编辑工作流。 |
-| `Time・Res Fixer (Img/Mask)` | 将图像和可选遮罩调整到指定倍数的画布尺寸，两路输出保持像素级对齐。 |
+两个节点都不需要下载模型，也不需要额外安装 Python 包。
 
 ## 安装
 
-- 在 ComfyUI Manager 中搜索 `Time image`（Comfy Registry），或用 **Install via Git URL** 填 `https://github.com/shiguanggougouo/Time-image`。
-- 命令行：`comfy node registry-install time-image`。
-- 或将 `Time-image` 文件夹复制到 `ComfyUI/custom_nodes/`，然后重启 ComfyUI。
+1. 在 ComfyUI Manager 中搜索 **Time image** 并安装；也可以用 **Install via Git URL** 填 `https://github.com/shiguanggougouo/Time-image`，或在命令行执行 `comfy node registry-install time-image`。
+2. **重启 ComfyUI**：新节点的界面扩展和中英文翻译要重启后才会加载。
 
-无需下载任何模型文件。安装后请重启 ComfyUI，让新增的前端扩展生效。
+手动安装：把 `Time-image` 文件夹放入 `ComfyUI/custom_nodes/`，然后启动 ComfyUI。
 
-## 快速上手：Time・提示词 + 图像 + 分辨率
+## 1. Time・Prompt + Images + Resolution
 
-![ComfyUI 中的「提示词 + 图像 + 分辨率」节点](docs/prompt-image-resolution.png)
+![提示词、图片和分辨率节点](docs/prompt-image-resolution.png)
 
-*示例：启用两张参考图，提示词里用 `<Picture 1>` / `<Picture 2>` 引用，宽高比 1:1、最小边 1024 → 输出 `1024 × 1024`（1.05 MP）。底部绿色文字实时显示结果。*
+这个节点把提示词、参考图和目标宽高放在一起。默认只显示提示词；勾选 **图片（Images）** 或 **分辨率（Resolution）** 后，才会展开相应设置。
 
-**一句话说明**：它把原来要分开做的三件事 —— 写提示词、挂参考图、定输出尺寸 —— 收进了一个节点。特别适合「把 `<Picture 1>` 的角色换成 `<Picture 2>` 的角色」这类多图提示词，供支持 `<Picture N>` 标记的模型使用。
+### 使用步骤
 
-### 四步跑通第一个工作流
+1. **写提示词**：在提示词框输入内容。先导入图片，再输入 `@` 可从已导入图片中选择；选中后会插入带缩略图的 `<Picture N>` 标记。直接输入 `@图1`、`@图像1` 也会自动转成同样的标记。
+2. **添加参考图（可选）**：打开 **图片**，点击 `+` 或把图片拖到节点里，最多 10 张。每张图片旁可单独启用或停用；点击 **替换图1**、**替换图2** 等按钮可更换对应图片，点击缩略图右上角 `×` 删除，点击缩略图可放大预览。英文界面会显示 **Replace Image 1** 等文字。
+3. **设置尺寸（可选）**：打开 **分辨率**，选择宽高比（`1:1`、`3:2`、`2:3`、`4:3`、`3:4`、`16:9`、`9:16`、`21:9`、`9:21`），再选择「边长像素」或「百万像素」模式。边长像素可指定为最小边或最大边；可选预设，也可直接输入数字。尺寸对齐可选「关闭」、8、16、32 或 64。
+4. **连接输出**：将 `宽度`、`高度` 接到需要宽高的节点；将 `提示词` 接到文本编码节点（例如 CLIP Text Encode）的文本输入；将 `图像 1`、`图像 2` 等接到模型的图像输入。
 
-1. **写提示词**：输入 `@` 可从已导入图片中选择，插入带缩略图的 `<Picture N>` 引用 chip；直接打 `@图1` 也会自动转成同样的标记。
-2. **勾选「图片」**：拖入图片或点 `+`，最多 10 张。每张缩略图可单独勾选启用、替换或删除；`image_1` … `image_N` 输出端口会随图片数量自动增减。
-3. **勾选「分辨率」**：选宽高比，再用「边长像素」（可选最小边 / 最大边）或「百万像素」定尺寸，并选对齐倍数 `OFF / 8 / 16 / 32 / 64`；绿色结果行会实时预览最终 MP 与宽高。也可以勾选「使用图像 1 分辨率」直接沿用第一张图的尺寸。
-4. **连接输出**：`宽度` / `高度` → Empty Latent Image 或任意尺寸输入；`提示词` → CLIP Text Encode；`image_N` → 模型的图像输入口。
+### 图片设置
+
+- 图片通过 ComfyUI 上传到 `ComfyUI/input/time_image/`，不需要手动复制文件，也不经过外部服务。
+- 勾选每张图旁的复选框可决定是否输出该图；关闭某张图不会改变其它图片的编号。
+- 勾选 **限制图像最大边** 后，可选择最大边像素，节点只会缩小超过该尺寸的图片，不会放大小图。
+- **所有图像对齐倍数** 可将启用的输入图统一对齐到「关闭」、8、16、32 或 64 的倍数。
+- 输出端口随导入图片增减（最多 `image_10`）；停用的图片仍占一个编号，对应输出为空。
+
+### 分辨率设置
+
+- **边长像素**：输入边长像素，并选择它表示最小边还是最大边；另一边按宽高比计算。支持预设，也支持手动输入 64–16384。
+- **百万像素**：直接输入百万像素目标，节点按宽高比计算最终宽高。
+- **对齐倍数**：选择「关闭」、8、16、32 或 64。选择「关闭」时取整到像素；选择数值时会将宽高对齐到该倍数。
+- **使用图像 1 分辨率**：使用第一张图的宽高，替代自定义分辨率。启用时需要先导入图像 1。
+- 底部绿色结果行实时显示最终 MP 和宽高，例如 `1.05 MP · 1024 × 1024`。关闭 **分辨率** 时，宽高输出为 `1024 × 1024`。
+
+> `<Picture N>` 是提示词里的引用标记，不会自动把图片接进模型。使用图像编辑或多图模型时，也要把对应的 `image_N` 输出连到模型。
 
 ### 输出
 
-| 输出 | 类型 | 说明 |
+| 输出 | 类型 | 内容 |
 | --- | --- | --- |
-| `宽度`、`高度` | `INT` | 已按倍数对齐的最终尺寸。 |
-| `提示词` | `STRING` | 保留 `<Picture N>` 标记的文本。 |
-| `image_1` … `image_10` | `IMAGE` | 端口按启用的图片动态增减，未使用的槽位为空。 |
+| `宽度`（`width`）、`高度`（`height`） | `INT` | 最终宽高。 |
+| `提示词`（`prompt`） | `STRING` | 引用图片的位置会输出为 `<Picture N>`。 |
+| `图像 1` … `图像 10`（`image_1` … `image_10`） | `IMAGE` | 按导入图片动态显示；编号与缩略图顺序一致。 |
 
-### 分辨率规则
+## 2. Time・Res Fixer (Img/Mask)
 
-- **边长像素**：设定值作用于所选的最小边或最大边，另一边按宽高比推算。预设 512–4096，也可手动输入 64–16384。
-- **百万像素**：`宽 = sqrt(MP × 1,000,000 × ratio)`，`高 = 宽 / ratio`，其中 `ratio = 宽 / 高`。
-- 两种模式都按倍数就近对齐（至少 1 个倍数），`OFF` 时只取整。例：1:1、最小边 1024、对齐 32 → `1024 × 1024` = 1.05 MP。
-- **图片区**：「所有图像对齐倍数」会对每张启用的图调用本包的 Res Fixer（`smart_fill` + `lanczos`）；「限制图像最大边」只缩小超限的大图，不会放大小图。
+![Res Fixer 图像与遮罩对齐示例](docs/res-fixer-workflow.jpg)
 
-### 新人注意
+当已有图像需要符合模型的尺寸倍数要求时使用。可选连接遮罩，节点会让图像和遮罩使用相同的缩放、裁切和补边位置。
 
-- 图片通过 ComfyUI 自带的上传接口存到 `ComfyUI/input/time_image/`，不需要手动拷文件，也不依赖外部服务。
-- `<Picture N>` 是提示词输出里的**文本标记**，不会自动绑定图片，记得把对应的 `image_N` 连到模型。
-- 节点默认是极简状态：只有提示词和「图片 / 分辨率」两个开关，勾选后才展开对应面板。
-- 关闭「分辨率」时回退为 1024 × 1024；未启用图片功能时不会加载图片。
+### 使用步骤
 
-## 版本变化
+1. 将待处理的图像接到 `image`。
+2. 如果有遮罩，将它接到 `mask`；没有遮罩也可以使用。
+3. 选择对齐倍数（`2、4、8、14、16、28、32、64、128、256、512`）、适配方式和图像重采样方式。
+4. 将 `image` 和 `mask` 输出接到后续节点；`width` 和 `height` 可接到需要尺寸的节点。
 
-- **2.1.0**：新增 `Time・提示词 + 图像 + 分辨率` 节点、前端扩展 `web/` 与中英界面翻译 `locales/`。原有 Res Fixer 工作流不受影响。
-- **2.0.0**：移除姿态提取节点（OpenPose / DWPose）与深度提取节点（Depth Anything V2），以及随包附带的第三方代码和模型自动下载逻辑。曾使用 `Time Pose Extractor`、`Time Depth Model Loader` 或 `Time Depth Extractor` 的工作流需要改用其它节点替代。此后整个包为轻量、纯 MIT 许可，不再有非商业限制。
+对齐后的画布宽、高分别向上取到所选倍数。例如，`1801 × 1011` 对齐到 32 后为 `1824 × 1024`。此节点负责对齐，不用于把画布缩小到指定尺寸。
 
-## 节点详解：Time・Res Fixer (Img/Mask)
+### 适配方式
 
-这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中最轻量稳定的一环。
+| `fit` | 效果 |
+| --- | --- |
+| `smart_fill`（默认） | 等比适配，镜像补齐空白区域，不留黑边。 |
+| `letterbox` | 等比适配，居中用黑色补齐空白区域。 |
+| `crop` | 等比放大并从中心裁切，边缘内容可能被裁掉。 |
+| `fill` | 直接拉伸到目标尺寸，画面比例可能改变。 |
 
-![ComfyUI 中的 Time・Res Fixer 工作流](docs/res-fixer-workflow.jpg)
+图像可选 `lanczos`、`bicubic`、`hamming`、`bilinear`、`box` 或 `nearest` 重采样。遮罩始终使用最近邻方式处理，避免遮罩边界被模糊。未连接遮罩时，`mask` 输出为空白遮罩。
 
-*工作流示例：1801×1011 的图像与遮罩经 `round_to_multiple = 32` 对齐为 1824×1024，输出的图像与遮罩保持像素级对齐。*
+常用组合：SD / SDXL 潜空间选 `8` 或 `64`，patch-14 类模型选 `14` 或 `28`；一般情况下保持 `lanczos` + `smart_fill` 即可。
 
-### 尺寸规则
+### 输出
 
-`目标尺寸 = ceil(原尺寸 / round_to_multiple) × round_to_multiple`，**只增不减**，最多比原图多出 `倍数 - 1` 像素。可选倍数：`2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`。
+| 输出 | 类型 | 内容 |
+| --- | --- | --- |
+| `image` | `IMAGE` | 对齐后的图像。 |
+| `mask` | `MASK` | 与图像同步对齐的遮罩；未连接遮罩时输出空白遮罩。 |
+| `width`、`height` | `INT` | 对齐后的画布宽高。 |
 
-- `8 / 32 / 64` 对应 VAE 与 latent 下采样（SD 1.5 / SDXL）。
-- `14 / 28` 对应 Depth Anything / DINO 系模型按 patch 14 裁切的网格，提前对齐可以避免下游悄悄裁掉像素。
-- 只需要偶数尺寸时，`2` 就够。
+## English (quick guide)
 
-### 四种 fit 模式
+Time image ships **two lightweight ComfyUI nodes** (v2.1.0). No model downloads, no network access, no extra Python packages.
 
-| `fit` | 缩放方式 | 剩余空间处理 | 效果 |
-| --- | --- | --- | --- |
-| `smart_fill`（默认） | 等比，`min` 比例 | 镜像反射填充，等同 OpenCV `BORDER_REFLECT_101`（边缘像素不重复） | 无黑边、不变形 |
-| `letterbox` | 等比，`min` 比例 | 居中补 `0` | 保留完整构图，有黑边 |
-| `crop` | 等比，`max` 比例 | 中心裁切 | 铺满画面，丢失边缘内容 |
-| `fill` | 直接拉伸到目标尺寸 | 无 | 轻微形变 |
+**Install:** search `Time image` in ComfyUI Manager (or use **Install via Git URL** with `https://github.com/shiguanggougouo/Time-image`), then **restart ComfyUI** so the front-end extension and EN/ZH translations load.
 
-例：1000×600 按 64 对齐得到 1024×640；等比缩放后为 1024×614，缺少的 26 像素高度由镜像内容补齐。
+1. **Time・Prompt + Images + Resolution** — prompt, up to 10 reference images, and output size in one node. The node starts minimal: tick **Images** / **Resolution** to reveal those panels. Type `@` to insert a `<Picture N>` marker (plain `@图1` is converted too). Files are uploaded to `ComfyUI/input/time_image/`; each image can be enabled, replaced, deleted or previewed. Resolution supports 9 aspect ratios, **Side pixels** (shortest / longest edge) or **Megapixels**, `OFF / 8 / 16 / 32 / 64` alignment, and **Use Image 1 resolution**. Outputs: `width`, `height`, `prompt`, `image_1` … `image_10`. With Resolution off, the size is `1024 × 1024`.
+   > `<Picture N>` is only a **text marker**: also wire the matching `image_N` output into your model.
+2. **Time・Res Fixer (Img/Mask)** — aligns an image and optional mask to a canvas divisible by the chosen multiple (`2` … `512`), using the same scaling / cropping / padding geometry for both. Fit modes: `smart_fill` (mirror padding), `letterbox` (black padding), `crop` (center crop), `fill` (stretch). Outputs: `image`, `mask`, `width`, `height`. Sizes only round up; this node cannot shrink to a fixed resolution.
 
-### 图像与遮罩严格同步
+See the Chinese sections above for step-by-step wiring, screenshots and all options.
 
-- 图像提供 6 种 PIL 重采样（默认 `lanczos`，另有 `bicubic`、`hamming`、`bilinear`、`box`、`nearest`）；遮罩固定使用 `nearest`，保留二值边界与软边数值，不会被插值糊出中间灰度。
-- 缩放、裁切、补边在两路上共用完全相同的坐标：`smart_fill` 时遮罩同样镜像，`letterbox` 时补 `0`，`crop` 时按同一中心裁切。
-- 单张遮罩自动广播到整个图像 batch；数量不一致会明确报错。若遮罩分辨率与图像不同，会先用 `nearest` 校正到图像尺寸，再走同一套几何。
-- 未连接遮罩时返回全 `0` 的遮罩（ComfyUI 中 `0` 表示未选中），四个输出始终齐全，链路不会中断。
+## License
 
-### 输出与行为
-
-输出为 `image`、`mask`、`width`（`INT`）、`height`（`INT`）。整数宽高可以直接接到 Empty Latent Image、KSampler 或放大节点，上游更换分辨率时下游自动跟随，无需手算。
-
-节点会校验 `IMAGE` 为 `[B,H,W,C]` 且通道数为 1/3/4、`MASK` 为 `[B,H,W]`，并对 `fit` / `method` 做白名单检查。灰度图按 PIL `L` 处理并补回通道维，RGBA 同样可用。输出的 dtype 与 device 跟随输入（fp16 / bf16 / GPU 张量可直接透传），`ascontiguousarray` 与 `detach()` 保证张量内存连续、不带计算图。
-
-### 使用边界
-
-- 只向上补齐，不能把图像缩小到 512 之类的固定分辨率。
-- 每帧经过 `round(x*255)` 的 uint8 量化，结果不是逐位精确。
-- 重采样在 CPU 上用 PIL 逐帧进行：4K 输入、大 batch 或视频会较慢，并有一次 GPU↔CPU 往返。
-- `smart_fill` 会把遮罩边缘镜像到补边区域；若遮罩贴着画布边缘且要求精确，改用 `letterbox`。
-- `letterbox` 固定为居中黑边，暂不支持自定义填充颜色、填充位置或任意目标分辨率。
-
-**参数速选**：SD/SDXL latent 用 `8` 或 `64`；Depth Anything / DINO 系模型用 `14` 或 `28`；只需偶数用 `2`。常规出图推荐 `lanczos` + `smart_fill`。
-
-## 许可
-
-MIT 许可，完整条款见 [`LICENSE`](LICENSE)。本包只含原创代码，不含第三方代码，也不附带模型权重，可用于商业用途。
+MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代码或模型权重，可商用。
