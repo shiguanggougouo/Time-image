@@ -1,0 +1,42 @@
+{
+  "PromptImageResolution": {
+    "display_name": "Time・提示词 + 图像 + 分辨率",
+    "inputs": {
+      "prompt": { "name": "提示词" },
+      "aspect_ratio": { "name": "宽高比" },
+      "edge_limit": {
+        "name": "边长规则",
+        "options": { "最小边": "最小边", "最大边": "最大边" }
+      },
+      "edge_resolution": { "name": "边长像素" },
+      "resolution_mode": {
+        "name": "分辨率模式",
+        "options": { "边长像素": "边长像素", "百万像素": "百万像素" }
+      },
+      "megapixels": { "name": "百万像素目标" },
+      "round_to_multiple": { "name": "对齐倍数", "options": { "OFF": "关闭" } },
+      "enable_images": { "name": "启用图像" },
+      "limit_image_max_edge": { "name": "限制图像最大边" },
+      "image_max_edge": { "name": "最大边像素" },
+      "enable_resolution": { "name": "启用分辨率" },
+      "use_image1_resolution": { "name": "使用图像 1 分辨率" },
+      "image_snap_multiple": { "name": "所有图像对齐倍数", "options": { "OFF": "关闭" } },
+      "images": { "name": "图像" }
+    },
+    "outputs": {
+      "0": { "name": "宽度" },
+      "1": { "name": "高度" },
+      "2": { "name": "提示词" },
+      "3": { "name": "图像 1" },
+      "4": { "name": "图像 2" },
+      "5": { "name": "图像 3" },
+      "6": { "name": "图像 4" },
+      "7": { "name": "图像 5" },
+      "8": { "name": "图像 6" },
+      "9": { "name": "图像 7" },
+      "10": { "name": "图像 8" },
+      "11": { "name": "图像 9" },
+      "12": { "name": "图像 10" }
+    }
+  }
+}

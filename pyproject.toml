@@ -1,7 +1,7 @@
 [project]
 name = "time-image"
-version = "2.0.0"
-description = "A single dependency-free ComfyUI node that aligns an image and mask to divisible dimensions."
+version = "2.1.0"
+description = "Two ComfyUI nodes: prompt + up to 10 reference images + output resolution in one node, plus an image/mask resolution aligner."
 requires-python = ">=3.10"
 # Only numpy / torch / Pillow are needed, all already provided by ComfyUI.
 # Never list torch here: pip may replace ComfyUI's CUDA build with a CPU wheel.

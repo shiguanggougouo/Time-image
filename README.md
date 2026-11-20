@@ -1,12 +1,18 @@
 # Time image
 
-A single, dependency-free ComfyUI node: **Time・Res Fixer (Img/Mask)** aligns an image and its optional mask to dimensions divisible by a chosen multiple, then outputs the resulting width and height as integers for downstream nodes.
+Two lightweight, dependency-free ComfyUI nodes in one pack:
+
+- **Time・Prompt + Images + Resolution** — write a prompt, drop in reference images and choose the output size, all in one node. New in 2.1.0.
+- **Time・Res Fixer (Img/Mask)** — align an image and its optional mask to dimensions divisible by a chosen multiple, then output the resulting width and height as integers for downstream nodes.
 
 No model weights, no downloads, no network access, no extra Python packages — only `numpy`, `torch` and `Pillow`, which ComfyUI already provides. The entire package is MIT-licensed.
 
-## Node
+## Nodes
 
-- **Time・Res Fixer (Img/Mask)** — fit an image and optional mask to a divisible canvas, keeping both pixel-aligned.
+| Node | What it is for |
+| --- | --- |
+| `Time・Prompt + Images + Resolution` | One-stop prompt + up to 10 reference images + width/height for image-editing and multi-image workflows. |
+| `Time・Res Fixer (Img/Mask)` | Fit an image and optional mask to a divisible canvas, keeping both pixel-aligned. |
 
 ## Installation
 
@@ -14,11 +20,49 @@ No model weights, no downloads, no network access, no extra Python packages — 
 - From the command line: `comfy node registry-install time-image`.
 - Or copy the `Time-image` folder into `ComfyUI/custom_nodes/` and restart ComfyUI.
 
-No model files need to be downloaded.
+No model files need to be downloaded. Restart ComfyUI after installing so the new front-end extension is loaded.
 
-## What changed in 2.0.0
+## Quick start: Time・Prompt + Images + Resolution
 
-The pose extraction nodes (OpenPose / DWPose) and the depth extraction nodes (Depth Anything V2) were removed, together with all bundled third-party code and automatic model downloads. Workflows that used `Time Pose Extractor`, `Time Depth Model Loader` or `Time Depth Extractor` need to replace those nodes. The package is now one lightweight node under a plain MIT license, with no non-commercial restrictions.
+![The Prompt + Images + Resolution node in ComfyUI](docs/prompt-image-resolution.png)
+
+*Example: two reference photos enabled, a prompt built with `<Picture 1>` / `<Picture 2>` chips, 1:1 with a 1024 px shortest edge → `1024 × 1024` (1.05 MP). The green line shows the live result.*
+
+**In one sentence:** it replaces three separate bits of plumbing — writing a prompt, attaching reference images, and setting the output size — with a single node. It is especially handy for "replace the character in Picture 1 with the one in Picture 2" style prompts for models that understand `<Picture N>` markers.
+
+### Your first workflow in four steps
+
+1. **Write the prompt.** Type `@` to pick an imported image; it inserts a `<Picture N>` chip with a thumbnail. Plain `@图1` text is converted to the same marker automatically.
+2. **Tick `Images`.** Drag files onto the node or press `+` (up to 10). Each thumbnail can be enabled, replaced or deleted; `image_1` … `image_N` output sockets appear as images are added.
+3. **Tick `Resolution`.** Pick an aspect ratio plus **Side pixels** (with a shortest/longest edge rule) or **Megapixels**, and an alignment multiple of `OFF / 8 / 16 / 32 / 64`. The green line previews the final MP and size. **Use Image 1 resolution** copies the first image's size instead.
+4. **Wire the outputs:** `width` / `height` → Empty Latent Image or any size input; `prompt` → CLIP Text Encode; `image_N` → the image inputs of your model.
+
+### Outputs
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `width`, `height` | `INT` | Final size, already aligned to the chosen multiple. |
+| `prompt` | `STRING` | Your text with `<Picture N>` markers preserved. |
+| `image_1` … `image_10` | `IMAGE` | Sockets are added/removed dynamically to match the enabled images; unused slots are empty. |
+
+### Resolution rules
+
+- **Side pixels:** the chosen value applies to the shortest or longest edge; the other edge follows the aspect ratio. Presets run from 512 to 4096, or type any value from 64 to 16384.
+- **Megapixels:** `w = sqrt(MP × 1,000,000 × ratio)`, `h = w / ratio`, where `ratio = width / height`.
+- Both modes round to the nearest multiple (minimum one multiple); `OFF` rounds to whole pixels. Example: 1:1 at a 1024 px shortest edge, aligned to 32 → `1024 × 1024` = 1.05 MP.
+- **Image panel:** "Align all images to multiple" runs the bundled Res Fixer (`smart_fill` + `lanczos`) on every enabled image; "Limit image max edge" only shrinks oversized images, never enlarges small ones.
+
+### Good to know
+
+- Images are uploaded through ComfyUI's own upload endpoint into `ComfyUI/input/time_image/` — no manual file copying, no external services.
+- `<Picture N>` is a **text marker** in the prompt output, not an automatic image binding. Connect the matching `image_N` socket yourself.
+- The node starts minimal: only the prompt and two toggles are visible; the image and resolution panels stay hidden until ticked.
+- With `Resolution` off it falls back to 1024 × 1024; images are only loaded when that feature is enabled.
+
+## What changed
+
+- **2.1.0** — added the `Time・Prompt + Images + Resolution` node, its web front-end (`web/`) and English/Chinese UI translations (`locales/`). Existing Res Fixer workflows are unaffected.
+- **2.0.0** — removed the pose extraction nodes (OpenPose / DWPose) and depth extraction nodes (Depth Anything V2), together with all bundled third-party code and automatic model downloads. Workflows that used `Time Pose Extractor`, `Time Depth Model Loader` or `Time Depth Extractor` need to replace those nodes. The package became a lightweight, plain-MIT node pack with no non-commercial restrictions.
 
 ## Time・Res Fixer (Img/Mask) in detail
 
@@ -76,13 +120,19 @@ MIT — see [`LICENSE`](LICENSE). This package contains only original code: no t
 
 # Time image（中文说明）
 
-Time image 是一个独立的 ComfyUI 节点包，只提供 **Time・Res Fixer (Img/Mask)**：把图像与可选遮罩按同一套几何对齐到指定倍数的尺寸，并以整数输出最终宽高给下游节点。
+Time image 是一个独立的 ComfyUI 节点包，提供两个轻量节点：
 
-不加载模型权重、不下载文件、不联网、不需要额外 Python 包 —— 只依赖 ComfyUI 自带的 `numpy`、`torch` 和 `Pillow`。整个包采用 MIT 许可。
+- **Time・提示词 + 图像 + 分辨率**（2.1.0 新增）：提示词、参考图、输出尺寸在一个节点里一次搞定。
+- **Time・Res Fixer (Img/Mask)**：把图像与可选遮罩按同一套几何对齐到指定倍数，并以整数输出最终宽高给下游节点。
+
+不加载模型权重、不下载文件、不联网、不需要额外 Python 包 —— 只依赖 ComfyUI 自带的 `numpy`、`torch` 和 `Pillow`。整个包采用 MIT 许可，可商用。
 
 ## 节点
 
-- **Time・Res Fixer (Img/Mask)**：将图像和可选遮罩调整到指定倍数的画布尺寸，两路输出保持像素级对齐。
+| 节点 | 用途 |
+| --- | --- |
+| `Time・提示词 + 图像 + 分辨率` | 提示词 + 最多 10 张参考图 + 宽高，一次设置完成，适合多图编辑工作流。 |
+| `Time・Res Fixer (Img/Mask)` | 将图像和可选遮罩调整到指定倍数的画布尺寸，两路输出保持像素级对齐。 |
 
 ## 安装
 
@@ -90,15 +140,53 @@ Time image 是一个独立的 ComfyUI 节点包，只提供 **Time・Res Fixer (
 - 命令行：`comfy node registry-install time-image`。
 - 或将 `Time-image` 文件夹复制到 `ComfyUI/custom_nodes/`，然后重启 ComfyUI。
 
-无需下载任何模型文件。
+无需下载任何模型文件。安装后请重启 ComfyUI，让新增的前端扩展生效。
 
-## 2.0.0 的变化
+## 快速上手：Time・提示词 + 图像 + 分辨率
 
-姿态提取节点（OpenPose / DWPose）与深度提取节点（Depth Anything V2）已移除，随包附带的第三方代码和模型自动下载逻辑也一并删除。曾使用 `Time Pose Extractor`、`Time Depth Model Loader` 或 `Time Depth Extractor` 的工作流需要改用其它节点替代。现在整个包是一个轻量单节点、纯 MIT 许可，不再有非商业限制。
+![ComfyUI 中的「提示词 + 图像 + 分辨率」节点](docs/prompt-image-resolution.png)
+
+*示例：启用两张参考图，提示词里用 `<Picture 1>` / `<Picture 2>` 引用，宽高比 1:1、最小边 1024 → 输出 `1024 × 1024`（1.05 MP）。底部绿色文字实时显示结果。*
+
+**一句话说明**：它把原来要分开做的三件事 —— 写提示词、挂参考图、定输出尺寸 —— 收进了一个节点。特别适合「把 `<Picture 1>` 的角色换成 `<Picture 2>` 的角色」这类多图提示词，供支持 `<Picture N>` 标记的模型使用。
+
+### 四步跑通第一个工作流
+
+1. **写提示词**：输入 `@` 可从已导入图片中选择，插入带缩略图的 `<Picture N>` 引用 chip；直接打 `@图1` 也会自动转成同样的标记。
+2. **勾选「图片」**：拖入图片或点 `+`，最多 10 张。每张缩略图可单独勾选启用、替换或删除；`image_1` … `image_N` 输出端口会随图片数量自动增减。
+3. **勾选「分辨率」**：选宽高比，再用「边长像素」（可选最小边 / 最大边）或「百万像素」定尺寸，并选对齐倍数 `OFF / 8 / 16 / 32 / 64`；绿色结果行会实时预览最终 MP 与宽高。也可以勾选「使用图像 1 分辨率」直接沿用第一张图的尺寸。
+4. **连接输出**：`宽度` / `高度` → Empty Latent Image 或任意尺寸输入；`提示词` → CLIP Text Encode；`image_N` → 模型的图像输入口。
+
+### 输出
+
+| 输出 | 类型 | 说明 |
+| --- | --- | --- |
+| `宽度`、`高度` | `INT` | 已按倍数对齐的最终尺寸。 |
+| `提示词` | `STRING` | 保留 `<Picture N>` 标记的文本。 |
+| `image_1` … `image_10` | `IMAGE` | 端口按启用的图片动态增减，未使用的槽位为空。 |
+
+### 分辨率规则
+
+- **边长像素**：设定值作用于所选的最小边或最大边，另一边按宽高比推算。预设 512–4096，也可手动输入 64–16384。
+- **百万像素**：`宽 = sqrt(MP × 1,000,000 × ratio)`，`高 = 宽 / ratio`，其中 `ratio = 宽 / 高`。
+- 两种模式都按倍数就近对齐（至少 1 个倍数），`OFF` 时只取整。例：1:1、最小边 1024、对齐 32 → `1024 × 1024` = 1.05 MP。
+- **图片区**：「所有图像对齐倍数」会对每张启用的图调用本包的 Res Fixer（`smart_fill` + `lanczos`）；「限制图像最大边」只缩小超限的大图，不会放大小图。
+
+### 新人注意
+
+- 图片通过 ComfyUI 自带的上传接口存到 `ComfyUI/input/time_image/`，不需要手动拷文件，也不依赖外部服务。
+- `<Picture N>` 是提示词输出里的**文本标记**，不会自动绑定图片，记得把对应的 `image_N` 连到模型。
+- 节点默认是极简状态：只有提示词和「图片 / 分辨率」两个开关，勾选后才展开对应面板。
+- 关闭「分辨率」时回退为 1024 × 1024；未启用图片功能时不会加载图片。
+
+## 版本变化
+
+- **2.1.0**：新增 `Time・提示词 + 图像 + 分辨率` 节点、前端扩展 `web/` 与中英界面翻译 `locales/`。原有 Res Fixer 工作流不受影响。
+- **2.0.0**：移除姿态提取节点（OpenPose / DWPose）与深度提取节点（Depth Anything V2），以及随包附带的第三方代码和模型自动下载逻辑。曾使用 `Time Pose Extractor`、`Time Depth Model Loader` 或 `Time Depth Extractor` 的工作流需要改用其它节点替代。此后整个包为轻量、纯 MIT 许可，不再有非商业限制。
 
 ## 节点详解：Time・Res Fixer (Img/Mask)
 
-这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中唯一、也是最轻量稳定的一环。
+这个节点的定位是**输入对齐**，而不是通用缩放：它把图像与遮罩用同一套几何一起补齐到指定倍数，再交给下游模型。全程不加载权重、不联网、结果完全确定，也是本包中最轻量稳定的一环。
 
 ![ComfyUI 中的 Time・Res Fixer 工作流](docs/res-fixer-workflow.jpg)
 

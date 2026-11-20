@@ -1,9 +1,12 @@
 import math
+import json
+import re
 
 import numpy as np
 import torch
 import torch.nn.functional as F
 from PIL import Image
+import nodes
 
 
 _RESAMPLING = {
@@ -156,10 +159,133 @@ class ImageMaskResolutionFixer:
         return (image_out, mask_out, target_w, target_h)
 
 
+_ASPECTS = {
+    "1:1": (1, 1), "3:2": (3, 2), "2:3": (2, 3),
+    "4:3": (4, 3), "3:4": (3, 4), "16:9": (16, 9),
+    "9:16": (9, 16), "21:9": (21, 9), "9:21": (9, 21),
+}
+
+
+class PromptImageResolution:
+    """Compact prompt, up to ten optional images, and output-size selector."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "prompt": ("STRING", {"multiline": True, "default": ""}),
+                "aspect_ratio": (list(_ASPECTS), {"default": "1:1"}),
+                "edge_limit": (["最小边", "最大边"], {"default": "最大边"}),
+                "edge_resolution": ("INT", {"default": 1024, "min": 64, "max": 16384, "step": 1}),
+                "resolution_mode": (["边长像素", "百万像素"], {"default": "边长像素"}),
+                "megapixels": ("FLOAT", {"default": 1.0, "min": 0.1, "max": 32.0, "step": 0.1}),
+                "round_to_multiple": (["OFF", 8, 16, 32, 64], {"default": 32}),
+                "enable_images": ("BOOLEAN", {"default": False}),
+                "limit_image_max_edge": ("BOOLEAN", {"default": False}),
+                "image_max_edge": ([512, 640, 768, 896, 1024, 1280, 1536, 1792, 2048, 2560, 3072, 4096], {"default": 2048}),
+                "enable_resolution": ("BOOLEAN", {"default": False}),
+                "use_image1_resolution": ("BOOLEAN", {"default": False}),
+                "image_snap_multiple": (["OFF", 8, 16, 32, 64], {"default": "OFF"}),
+                "images": ("STRING", {"default": "", "multiline": True}),
+            },
+        }
+
+    RETURN_TYPES = ("INT", "INT", "STRING") + ("IMAGE",) * 10
+    RETURN_NAMES = ("width", "height", "prompt") + tuple(f"image_{i}" for i in range(1, 11))
+    FUNCTION = "build"
+    CATEGORY = "Time AI/图像"
+
+    def build(self, prompt, aspect_ratio, edge_limit, edge_resolution,
+              resolution_mode="边长像素", megapixels=1.0, round_to_multiple=32,
+              enable_images=False, limit_image_max_edge=False,
+              image_max_edge=2048, enable_resolution=False,
+              use_image1_resolution=False, image_snap_multiple="OFF", images=""):
+        if aspect_ratio not in _ASPECTS:
+            raise ValueError(f"Unknown aspect ratio: {aspect_ratio}")
+        if round_to_multiple != "OFF" and int(round_to_multiple) not in (8, 16, 32, 64):
+            raise ValueError("分辨率对齐倍数必须是 OFF、8、16、32 或 64。")
+        try:
+            image_items = json.loads(images) if images else []
+        except (TypeError, json.JSONDecodeError):
+            image_items = [{"name": name, "enabled": True} for name in images.splitlines() if name.strip()]
+        image_items = image_items[:10]
+        loaded = []
+        first_image = None
+        for index, item in enumerate(image_items):
+            enabled = bool(item.get("enabled", True))
+            needs_for_resolution = enable_resolution and use_image1_resolution and index == 0
+            tensor = None
+            if (enable_images and enabled) or needs_for_resolution:
+                tensor, _mask = nodes.LoadImage().load_image(item["name"])
+                if limit_image_max_edge and enable_images:
+                    tensor = self._limit_long_edge(tensor, int(image_max_edge))
+                if enable_images and image_snap_multiple != "OFF":
+                    snap = int(image_snap_multiple)
+                    if snap not in (8, 16, 32, 64):
+                        raise ValueError("图像对齐倍数必须是 OFF、8、16、32 或 64。")
+                    tensor, _mask, _, _ = ImageMaskResolutionFixer().resize_image_mask(
+                        tensor, fit="smart_fill", method="lanczos", round_to_multiple=snap,
+                    )
+            if index == 0:
+                first_image = tensor
+            if enable_images:
+                loaded.append(tensor if enabled else None)
+
+        if enable_resolution and use_image1_resolution:
+            if first_image is None:
+                raise ValueError("启用‘使用图像 1 分辨率’时，请先导入图像 1。")
+            height, width = first_image.shape[1:3]
+        else:
+            ratio_w, ratio_h = _ASPECTS[aspect_ratio] if enable_resolution else (1, 1)
+            ratio = ratio_w / ratio_h
+            multiple = round_to_multiple if enable_resolution else 32
+            if enable_resolution and resolution_mode == "百万像素":
+                area = max(0.1, float(megapixels)) * 1_000_000
+                width = math.sqrt(area * ratio)
+                height = width / ratio
+            else:
+                edge = int(edge_resolution) if enable_resolution else 1024
+                if enable_resolution and edge_limit == "最小边":
+                    width, height = (edge * ratio, edge) if ratio >= 1 else (edge, edge / ratio)
+                else:
+                    width, height = (edge, edge / ratio) if ratio >= 1 else (edge * ratio, edge)
+            if multiple == "OFF":
+                width = max(1, int(math.floor(width + 0.5)))
+                height = max(1, int(math.floor(height + 0.5)))
+            else:
+                multiple = int(multiple)
+                width = max(multiple, int(math.floor(width / multiple + 0.5)) * multiple)
+                height = max(multiple, int(math.floor(height / multiple + 0.5)) * multiple)
+        prompt = re.sub(r"@图(?:像)?\s*(\d+)", r"<Picture \1>", prompt)
+        # Outputs keep stable slot positions; unused image outputs are None.
+        return (width, height, prompt, *(loaded + [None] * (10 - len(loaded))))
+
+    @staticmethod
+    def _limit_long_edge(image, max_edge):
+        if max_edge < 1:
+            raise ValueError("图像最大边必须大于 0")
+        height, width = image.shape[1:3]
+        long_edge = max(width, height)
+        if long_edge <= max_edge:
+            return image
+        scale = max_edge / long_edge
+        target_width = max(1, int(round(width * scale)))
+        target_height = max(1, int(round(height * scale)))
+        resized = F.interpolate(
+            image.movedim(-1, 1), size=(target_height, target_width),
+            mode="bicubic", align_corners=False, antialias=True,
+        ).movedim(1, -1)
+        return resized.clamp(0, 1)
+
+
 NODE_CLASS_MAPPINGS = {
     "ImageMaskResolutionFixer": ImageMaskResolutionFixer,
+    "PromptImageResolution": PromptImageResolution,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "ImageMaskResolutionFixer": "Time・Res Fixer (Img/Mask)",
+    "PromptImageResolution": "Time・Prompt + Images + Resolution",
 }
+
+WEB_DIRECTORY = "./web"

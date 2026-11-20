@@ -1,0 +1,42 @@
+{
+  "PromptImageResolution": {
+    "display_name": "Time・Prompt + Images + Resolution",
+    "inputs": {
+      "prompt": { "name": "Prompt" },
+      "aspect_ratio": { "name": "Aspect ratio" },
+      "edge_limit": {
+        "name": "Edge rule",
+        "options": { "最小边": "Shortest edge", "最大边": "Longest edge" }
+      },
+      "edge_resolution": { "name": "Edge pixels" },
+      "resolution_mode": {
+        "name": "Resolution mode",
+        "options": { "边长像素": "Side pixels", "百万像素": "Megapixels" }
+      },
+      "megapixels": { "name": "Megapixel target" },
+      "round_to_multiple": { "name": "Align to multiple", "options": { "OFF": "Off" } },
+      "enable_images": { "name": "Enable images" },
+      "limit_image_max_edge": { "name": "Limit image max edge" },
+      "image_max_edge": { "name": "Max image edge (px)" },
+      "enable_resolution": { "name": "Enable resolution" },
+      "use_image1_resolution": { "name": "Use Image 1 resolution" },
+      "image_snap_multiple": { "name": "Align all images to multiple of", "options": { "OFF": "Off" } },
+      "images": { "name": "Images" }
+    },
+    "outputs": {
+      "0": { "name": "Width" },
+      "1": { "name": "Height" },
+      "2": { "name": "Prompt" },
+      "3": { "name": "Image 1" },
+      "4": { "name": "Image 2" },
+      "5": { "name": "Image 3" },
+      "6": { "name": "Image 4" },
+      "7": { "name": "Image 5" },
+      "8": { "name": "Image 6" },
+      "9": { "name": "Image 7" },
+      "10": { "name": "Image 8" },
+      "11": { "name": "Image 9" },
+      "12": { "name": "Image 10" }
+    }
+  }
+}

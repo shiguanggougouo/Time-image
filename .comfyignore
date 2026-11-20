@@ -1,3 +1,7 @@
 # Kept in git but excluded from the Comfy Registry archive
 docs/
 .gitignore
+__pycache__/
+*.pyc
+# NOTE: web/ and locales/ MUST ship in the archive - the prompt node
+# needs its front-end extension and UI translations to work.
