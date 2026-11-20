@@ -91,18 +91,105 @@ Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本
 | `mask` | `MASK` | 与图像同步对齐的遮罩；未连接遮罩时输出空白遮罩。 |
 | `width`、`height` | `INT` | 对齐后的画布宽高。 |
 
-## English (quick guide)
-
-Time image ships **two lightweight ComfyUI nodes** (v2.1.0). No model downloads, no network access, no extra Python packages.
-
-**Install:** search `Time image` in ComfyUI Manager (or use **Install via Git URL** with `https://github.com/shiguanggougouo/Time-image`), then **restart ComfyUI** so the front-end extension and EN/ZH translations load.
-
-1. **Time・Prompt + Images + Resolution** — prompt, up to 10 reference images, and output size in one node. The node starts minimal: tick **Images** / **Resolution** to reveal those panels. Type `@` to insert a `<Picture N>` marker (plain `@图1` is converted too). Files are uploaded to `ComfyUI/input/time_image/`; each image can be enabled, replaced, deleted or previewed. Resolution supports 9 aspect ratios, **Side pixels** (shortest / longest edge) or **Megapixels**, `OFF / 8 / 16 / 32 / 64` alignment, and **Use Image 1 resolution**. Outputs: `width`, `height`, `prompt`, `image_1` … `image_10`. With Resolution off, the size is `1024 × 1024`.
-   > `<Picture N>` is only a **text marker**: also wire the matching `image_N` output into your model.
-2. **Time・Res Fixer (Img/Mask)** — aligns an image and optional mask to a canvas divisible by the chosen multiple (`2` … `512`), using the same scaling / cropping / padding geometry for both. Fit modes: `smart_fill` (mirror padding), `letterbox` (black padding), `crop` (center crop), `fill` (stretch). Outputs: `image`, `mask`, `width`, `height`. Sizes only round up; this node cannot shrink to a fixed resolution.
-
-See the Chinese sections above for step-by-step wiring, screenshots and all options.
-
 ## License
 
 MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代码或模型权重，可商用。
+
+---
+
+# English
+
+Time image is a small pack of **two ComfyUI nodes**, currently at version **2.1.0**. The nodes are described in order below: first the all-in-one prompt, reference images and resolution node, then the image-and-mask alignment node.
+
+| Order | Node | What it is for |
+| --- | --- | --- |
+| 1 | **Time・Prompt + Images + Resolution** (Chinese UI: Time・提示词 + 图像 + 分辨率) | Write a prompt, add reference images, and set the output size. |
+| 2 | **Time・Res Fixer (Img/Mask)** | Align an existing image and an optional mask to dimensions divisible by a chosen multiple. |
+
+Neither node downloads models or needs extra Python packages.
+
+## Installation
+
+1. Search **Time image** in ComfyUI Manager and install it. You can also use **Install via Git URL** with `https://github.com/shiguanggougouo/Time-image`, or run `comfy node registry-install time-image` from the command line.
+2. **Restart ComfyUI**: the front-end extension and the English/Chinese translations are only loaded on startup.
+
+Manual install: put the `Time-image` folder in `ComfyUI/custom_nodes/`, then start ComfyUI.
+
+## 1. Time・Prompt + Images + Resolution
+
+![The prompt, images and resolution node](docs/prompt-image-resolution.png)
+
+This node keeps the prompt, reference images and target width/height together. By default only the prompt is visible; tick **Images** or **Resolution** to reveal the corresponding settings.
+
+### Your first workflow in four steps
+
+1. **Write the prompt:** type in the prompt box. Import images first, then type `@` to pick one; a `<Picture N>` marker with a thumbnail is inserted. Typing `@图1` or `@图像1` is converted to the same marker automatically.
+2. **Add reference images (optional):** enable **Images**, press `+` or drag files onto the node — up to 10. Each image can be enabled or disabled on its own. Use the **Replace Image 1**, **Replace Image 2**, … buttons to swap an image, the `×` on a thumbnail to delete it, and click a thumbnail to enlarge it. The Chinese UI shows **替换图1** and so on.
+3. **Set the size (optional):** enable **Resolution**, pick an aspect ratio (`1:1`, `3:2`, `2:3`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`, `9:21`), then choose **Side pixels** or **Megapixels**. Side pixels can mean the shortest or longest edge; presets and manual values are both available. Alignment can be `OFF`, 8, 16, 32 or 64.
+4. **Wire the outputs:** connect `width` / `height` to any size input, `prompt` to a text encoder (for example CLIP Text Encode), and `image_1`, `image_2`, … to the image inputs of your model.
+
+### Image options
+
+- Files are uploaded through ComfyUI into `ComfyUI/input/time_image/` — no manual copying, no external services.
+- The checkbox next to each image decides whether it is output; disabling one does not renumber the others.
+- With **Limit image max edge** enabled, pick a maximum edge in pixels. Only oversized images are shrunk; small ones are never enlarged.
+- **Align all images to multiple of** snaps every enabled input image to `OFF`, 8, 16, 32 or 64.
+- Output sockets appear as images are added (up to `image_10`). A disabled image still keeps its slot, and that output is empty.
+
+### Resolution options
+
+- **Side pixels:** enter the edge length and choose whether it is the shortest or longest edge; the other edge follows the aspect ratio. Presets are available, or type any value from 64 to 16384.
+- **Megapixels:** enter a megapixel target; the node derives width and height from the aspect ratio.
+- **Align to multiple:** `OFF`, 8, 16, 32 or 64. `OFF` rounds to whole pixels; a number rounds both dimensions to that multiple.
+- **Use Image 1 resolution:** use the first image's size instead of a custom resolution. Image 1 must be imported first.
+- The green result line shows the final MP and size live, e.g. `1.05 MP · 1024 × 1024`. With **Resolution** off, the output is `1024 × 1024`.
+
+> `<Picture N>` is a text marker in the prompt; it does not attach the image to the model automatically. For image editing or multi-image models, also connect the matching `image_N` output.
+
+### Outputs
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `width`, `height` (`宽度`, `高度` in the Chinese UI) | `INT` | Final width and height. |
+| `prompt` (`提示词`) | `STRING` | Image references are emitted as `<Picture N>`. |
+| `image_1` … `image_10` (`图像 1` … `图像 10`) | `IMAGE` | Shown dynamically to match imported images; numbering follows the thumbnail order. |
+
+## 2. Time・Res Fixer (Img/Mask)
+
+![Res Fixer image and mask alignment example](docs/res-fixer-workflow.jpg)
+
+Use it when an existing image must meet a model's dimension-multiple requirement. A mask is optional; the node applies the same scaling, cropping and padding positions to both.
+
+### Steps
+
+1. Connect the image to `image`.
+2. Connect a mask to `mask` if you have one; the node also works without a mask.
+3. Choose the alignment multiple (`2, 4, 8, 14, 16, 28, 32, 64, 128, 256, 512`), a fit mode and an image resampling method.
+4. Connect the `image` and `mask` outputs to the next nodes; `width` and `height` can go to any size input.
+
+The aligned canvas rounds width and height **up** to the chosen multiple. For example, `1801 × 1011` aligned to 32 becomes `1824 × 1024`. This node aligns; it is not meant to shrink a canvas to a target size.
+
+### Fit modes
+
+| `fit` | Effect |
+| --- | --- |
+| `smart_fill` (default) | Proportional fit; remaining space is filled with mirrored content, so there are no black bars. |
+| `letterbox` | Proportional fit; centered black padding. |
+| `crop` | Proportional upscale with a center crop; edge content may be lost. |
+| `fill` | Direct stretch to the target size; the aspect ratio may change. |
+
+Images can use `lanczos`, `bicubic`, `hamming`, `bilinear`, `box` or `nearest` resampling. Masks always use nearest-neighbour so their edges stay sharp. With no mask connected, the `mask` output is an empty (all-zero) mask.
+
+Common picks: `8` or `64` for SD / SDXL latents, `14` or `28` for patch-14 style models; `lanczos` + `smart_fill` is a good general default.
+
+### Outputs
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `image` | `IMAGE` | The aligned image. |
+| `mask` | `MASK` | The mask aligned with the image; empty when no mask is connected. |
+| `width`, `height` | `INT` | The aligned canvas width and height. |
+
+## License
+
+MIT — see [`LICENSE`](LICENSE). This package contains only original code, with no third-party code or model weights bundled, and may be used commercially.
