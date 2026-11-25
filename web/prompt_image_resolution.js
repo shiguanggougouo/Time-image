@@ -689,7 +689,7 @@ app.registerExtension({
       getMinHeight: measuredRootHeight,
       getMaxHeight: measuredRootHeight,
     });
-    const nativeComputeSize = node.computeSize.bind(node);
+    const nativeComputeSize = () => node.computeSize();
     node.computeSize = () => {
       // Keep LiteGraph's trailing widget clearance so the DOM panel and its
       // border/padding remain safely inside the node frame.
