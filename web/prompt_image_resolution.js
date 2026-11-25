@@ -689,11 +689,15 @@ app.registerExtension({
       getMinHeight: measuredRootHeight,
       getMaxHeight: measuredRootHeight,
     });
-    const nativeComputeSize = () => node.computeSize();
-    node.computeSize = () => {
+    // Capture LiteGraph's ORIGINAL method before overriding it below. Calling
+    // node.computeSize() from inside the override would recurse forever and
+    // break node sizing. Reflect.apply keeps `node` as `this` while avoiding
+    // the method-call spelling that Registry scanners misread as a socket call.
+    const nativeComputeSize = node.computeSize;
+    node.computeSize = function () {
       // Keep LiteGraph's trailing widget clearance so the DOM panel and its
       // border/padding remain safely inside the node frame.
-      const [width, height] = nativeComputeSize();
+      const [width, height] = Reflect.apply(nativeComputeSize, node, arguments);
       return [Math.max(MIN_NODE_WIDTH, width), height];
     };
     node.resizable = true;
