@@ -3,31 +3,33 @@ import { api } from "../../../scripts/api.js";
 
 const NODE = "PromptImageResolution";
 const MAX_IMAGES = 10;
-const MIN_NODE_WIDTH = 420;
+const MIN_NODE_WIDTH = 380;
 const UI_TEXT = {
   en: {
     promptPlaceholder: "Prompt… Type @ to mention an imported image",
     images: "Images", resolution: "Resolution", image: "Image {n}", replaceImage: "Replace Image {n}",
-    previewImage: "Click to preview", enableImage: "Enable this image", deleteImage: "Delete image", addImage: "Add image",
+    previewImage: "Click to preview", dropReplaceImage: "Drop a local image here to replace", enableImage: "Enable this image", deleteImage: "Delete image", addImage: "Add image",
     imageCount: "{count} / {max} images · Drop images here",
     limitImageMaxEdge: "Limit image max edge", imageSnapMultiple: "Align all images to multiple of",
     imageMaxEdge: "Max edge (px)", useImage1Resolution: "Use Image 1 resolution",
-    aspectRatio: "Aspect ratio", alignMultiple: "Align to multiple", edgeRule: "Edge rule",
+    aspectRatio: "Aspect ratio", ratioValue: "Ratio", alignMultiple: "Align to multiple", edgeRule: "Edge rule",
     edgePixels: "Edge pixels", megapixelsTarget: "Megapixel target",
-    edgeMode: "Side Pixels", megapixelMode: "Megapixels", edgeMin: "Shortest edge", edgeMax: "Longest edge",
+    aspectRatioMode: "Aspect Ratio", megapixelMode: "Megapixels", customSizeMode: "Custom size",
+    customWidth: "Width (px)", customHeight: "Height (px)", edgeMin: "Shortest edge", edgeMax: "Longest edge",
     waitingImage1: "Waiting for image 1", result: "Result {mp} MP · {size}",
     edgeUploadError: "Image upload failed: {name}", imageLabel: "Image {n}",
   },
   zh: {
     promptPlaceholder: "提示词… 输入 @ 引用已导入图片",
     images: "图片", resolution: "分辨率", image: "图像 {n}", replaceImage: "替换图{n}",
-    previewImage: "点击放大预览", enableImage: "启用此图像", deleteImage: "删除图像", addImage: "添加图片",
+    previewImage: "点击放大预览", dropReplaceImage: "拖入本地图片即可替换", enableImage: "启用此图像", deleteImage: "删除图像", addImage: "添加图片",
     imageCount: "{count} / {max} 张 · 可拖入图片",
     limitImageMaxEdge: "限制图像最大边", imageSnapMultiple: "所有图像对齐倍数",
     imageMaxEdge: "最大边像素", useImage1Resolution: "使用图像 1 分辨率",
-    aspectRatio: "宽高比", alignMultiple: "对齐倍数", edgeRule: "边长规则",
+    aspectRatio: "宽高比", ratioValue: "比例", alignMultiple: "对齐倍数", edgeRule: "边长规则",
     edgePixels: "边长像素", megapixelsTarget: "百万像素目标",
-    edgeMode: "边长像素", megapixelMode: "百万像素", edgeMin: "最小边", edgeMax: "最大边",
+    aspectRatioMode: "宽高比", megapixelMode: "百万像素", customSizeMode: "自定宽高",
+    customWidth: "宽度（像素）", customHeight: "高度（像素）", edgeMin: "最小边", edgeMax: "最大边",
     waitingImage1: "等待图像 1", result: "结果 {mp} MP · {size}",
     edgeUploadError: "图片上传失败：{name}", imageLabel: "图像 {n}",
   },
@@ -47,8 +49,11 @@ app.registerExtension({
     const controls = Object.fromEntries([
       "aspect_ratio", "edge_limit", "edge_resolution", "resolution_mode", "megapixels", "round_to_multiple",
       "enable_images", "limit_image_max_edge", "image_max_edge", "enable_resolution",
-      "use_image1_resolution", "image_snap_multiple",
+      "use_image1_resolution", "image_snap_multiple", "custom_width", "custom_height",
     ].map((name) => [name, find(name)]));
+    const toggleBindings = new Map();
+    const checkboxBindings = new Map();
+    const valueBindings = new Map();
     if (!list) return;
     let uiLanguage = getUiLanguage();
     const t = (key, values = {}) => (UI_TEXT[uiLanguage][key] || UI_TEXT.en[key] || key)
@@ -56,7 +61,7 @@ app.registerExtension({
     const optionText = (name, value) => {
       if (value === "OFF") return uiLanguage === "zh" ? "关闭" : "Off";
       if (name === "edge_limit") return value === "最小边" ? t("edgeMin") : value === "最大边" ? t("edgeMax") : String(value);
-      if (name === "resolution_mode") return value === "边长像素" ? t("edgeMode") : value === "百万像素" ? t("megapixelMode") : String(value);
+      if (name === "resolution_mode") return value === "边长像素" ? t("aspectRatioMode") : value === "百万像素" ? t("megapixelMode") : value === "自定义宽高" ? t("customSizeMode") : String(value);
       return String(value);
     };
     if (controls.image_snap_multiple && controls.image_snap_multiple.value !== "OFF") {
@@ -83,38 +88,44 @@ app.registerExtension({
     }
 
     const root = document.createElement("div");
-    root.style.cssText = "--ti-accent:#08b88a;width:100%;box-sizing:border-box;padding:10px 11px 30px;background:#202124;color:#f1f2f4;border:1px solid #34363a;border-radius:12px;font:12px/1.35 sans-serif;box-shadow:inset 0 1px 0 #ffffff08";
+    // Keep visible breathing room below the last settings card; this padding is
+    // included by measuredRootHeight() so the LiteGraph frame grows with it.
+    root.style.cssText = "--ti-accent:#08b88a;width:100%;box-sizing:border-box;padding:8px 9px 26px;background:#202124;color:#f1f2f4;border:1px solid #34363a;border-radius:12px;font:12px/1.35 sans-serif;box-shadow:inset 0 1px 0 #ffffff08";
     const toggles = document.createElement("div");
-    toggles.style.cssText = "display:flex;gap:18px;align-items:center;min-height:38px;margin:1px 0 8px;padding:0 12px;background:#191a1c;border:1px solid #303236;border-radius:10px;box-sizing:border-box";
+    toggles.style.cssText = "display:flex;gap:16px;align-items:center;min-height:34px;margin:1px 0 6px;padding:0 10px;background:#191a1c;border:1px solid #303236;border-radius:10px;box-sizing:border-box";
     const imageSection = document.createElement("div");
     const imageSettings = document.createElement("div");
     imageSettings.style.cssText = "display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px;padding:9px;background:#191a1c;border:1px solid #303236;border-radius:8px;box-sizing:border-box";
     const maxEdgeChoices = document.createElement("div");
     maxEdgeChoices.style.cssText = "flex:1 1 100%;min-width:170px";
     const strip = document.createElement("div");
-    strip.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;min-height:98px;overflow:visible";
+    // In the empty state the add tile is 62px tall; image tiles grow naturally
+    // to include their footer, so a larger fixed minimum only creates dead space.
+    strip.style.cssText = "display:flex;flex-wrap:wrap;gap:6px;align-items:flex-start;min-height:62px;overflow:visible";
     const hint = document.createElement("div");
     hint.style.cssText = "color:#aaa;font-size:10px;margin-top:3px";
     const sizeSection = document.createElement("div");
-    sizeSection.style.cssText = "margin-top:5px";
+    sizeSection.style.cssText = "margin-top:4px";
     const modeRow = document.createElement("div");
-    modeRow.style.cssText = "display:flex;gap:15px;align-items:center;margin:4px 0";
+    modeRow.style.cssText = "display:flex;gap:12px;align-items:center;margin:2px 0;padding:0 10px;box-sizing:border-box";
     const customResolution = document.createElement("div");
     const image1Resolution = document.createElement("div");
     image1Resolution.style.cssText = "margin-top:4px;padding:8px 9px;background:#191a1c;border:1px solid #303236;border-radius:8px";
     const resolutionModeBar = document.createElement("div");
-    resolutionModeBar.style.cssText = "display:flex;gap:5px;margin:6px 0;padding:4px;background:#191a1c;border:1px solid #303236;border-radius:8px";
+    resolutionModeBar.style.cssText = "display:flex;gap:4px;margin:4px 0;padding:3px;background:#191a1c;border:1px solid #303236;border-radius:8px";
     const ratioControls = document.createElement("div");
-    ratioControls.style.cssText = "display:flex;gap:6px;margin-top:7px;padding:9px;background:#191a1c;border:1px solid #303236;border-radius:8px";
+    ratioControls.style.cssText = "display:flex;gap:5px;margin-top:5px;padding:6px;background:#191a1c;border:1px solid #303236;border-radius:8px";
     const edgeControls = document.createElement("div");
-    edgeControls.style.cssText = "display:flex;gap:6px;margin-top:7px;padding:9px;background:#191a1c;border:1px solid #303236;border-radius:8px";
+    edgeControls.style.cssText = "display:flex;gap:5px;margin-top:5px;padding:6px;background:#191a1c;border:1px solid #303236;border-radius:8px";
     const mpControl = document.createElement("label");
-    mpControl.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:7px;padding:10px;background:#191a1c;border:1px solid #303236;border-radius:8px;color:#aeb2b8;font-size:11px";
+    mpControl.style.cssText = "display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:5px;padding:7px;background:#191a1c;border:1px solid #303236;border-radius:8px;color:#aeb2b8;font-size:11px";
     const mpInput = document.createElement("input");
     mpInput.type = "number"; mpInput.min = "0.1"; mpInput.max = "32"; mpInput.step = "0.1";
-    mpInput.style.cssText = "width:120px;box-sizing:border-box;padding:7px 9px;background:#292a2e;color:#29d6a5;border:1px solid #414349;border-radius:6px;font-size:13px;font-weight:600";
+    mpInput.style.cssText = "width:112px;box-sizing:border-box;padding:5px 8px;background:#292a2e;color:#29d6a5;border:1px solid #414349;border-radius:6px;font-size:12px;font-weight:600";
     const mpValue = document.createElement("span");
-    mpValue.style.cssText = "color:#29d6a5;font-size:11px;align-self:center;white-space:nowrap;padding:8px 3px 2px;font-weight:600";
+    mpValue.style.cssText = "color:#29d6a5;font-size:11px;align-self:center;white-space:nowrap;padding:5px 3px 1px;font-weight:600";
+    const customDimensionControls = document.createElement("div");
+    customDimensionControls.style.cssText = "display:flex;gap:5px;margin-top:5px;padding:6px;background:#191a1c;border:1px solid #303236;border-radius:8px";
     const image1MPValue = document.createElement("span");
     image1MPValue.style.cssText = mpValue.style.cssText;
     const picker = document.createElement("input");
@@ -131,7 +142,7 @@ app.registerExtension({
     function selectFor(name, label, target = ratioControls) {
       const widget = controls[name]; if (!widget) return;
       const wrap = document.createElement("label");
-      wrap.style.cssText = "flex:1;min-width:0;color:#979ba2;font-size:9px;display:flex;flex-direction:column;gap:4px;letter-spacing:.02em";
+      wrap.style.cssText = "flex:1;min-width:0;color:#979ba2;font-size:9px;display:flex;flex-direction:column;gap:3px;letter-spacing:.02em";
       wrap.dataset.tiLabel = label;
       wrap.append(document.createTextNode(t(label)));
       if (name === "edge_resolution") {
@@ -157,14 +168,17 @@ app.registerExtension({
           const value = Math.min(16384, Math.max(64, Math.round(Number(input.value) || 1024)));
           input.value = String(value); update();
         });
+        valueBindings.set(name, () => {
+          if (document.activeElement !== input) input.value = String(widget.value ?? 1024);
+        });
         input.onfocus = () => { input.style.borderColor = "#08b88a"; };
         input.onblur = () => { input.style.borderColor = "#414349"; };
         combo.append(input, datalist); wrap.append(combo); target.append(wrap);
-        return;
+        return wrap;
       }
       const select = document.createElement("select");
       select.dataset.tiWidget = name;
-      select.style.cssText = "width:100%;min-width:0;background:#292a2e;color:#f4f4f5;border:1px solid #414349;border-radius:6px;padding:6px 7px;font-size:11px;accent-color:#08b88a";
+      select.style.cssText = "width:100%;min-width:0;background:#292a2e;color:#f4f4f5;border:1px solid #414349;border-radius:6px;padding:5px 7px;font-size:11px;accent-color:#08b88a";
       select.onfocus = () => { select.style.borderColor = "#08b88a"; };
       select.onblur = () => { select.style.borderColor = "#414349"; };
       for (const value of widget.options?.values || []) {
@@ -176,7 +190,38 @@ app.registerExtension({
           : name === "round_to_multiple" && select.value !== "OFF" ? Number(select.value) : select.value;
         widget.callback?.(widget.value); updateMP(); app.graph.setDirtyCanvas(true, true);
       };
+      valueBindings.set(name, () => { select.value = String(widget.value); });
       wrap.append(select); target.append(wrap);
+      return wrap;
+    }
+    function dimensionInputFor(name, label) {
+      const widget = controls[name]; if (!widget) return null;
+      const wrap = document.createElement("div");
+      wrap.style.cssText = "flex:1;min-width:0;display:flex;flex-direction:column;gap:4px;color:#979ba2;font-size:9px;letter-spacing:.02em";
+      const caption = document.createElement("span"); caption.textContent = t(label); caption.dataset.tiLabel = label;
+      const input = document.createElement("input");
+      input.type = "number"; input.min = "1"; input.max = "32768"; input.step = "1";
+      input.className = "time-image-edge-input";
+      input.value = String(widget.value ?? 1024);
+      input.style.cssText = "width:100%;box-sizing:border-box;background:#292a2e;color:#f4f4f5;border:1px solid #414349;border-radius:6px;padding:6px 7px;font-size:11px";
+      const commit = (finalize = false) => {
+        let value = Number(input.value);
+        if (finalize) {
+          value = Math.min(32768, Math.max(1, Math.round(value || 1024)));
+          input.value = String(value);
+        }
+        if (!Number.isInteger(value) || value < 1 || value > 32768) return;
+        widget.value = value; widget.callback?.(value); updateMP(); app.graph.setDirtyCanvas(true, true);
+      };
+      input.addEventListener("input", () => commit(false));
+      input.addEventListener("change", () => commit(true));
+      input.onfocus = () => { input.style.borderColor = "#08b88a"; };
+      input.onblur = () => { input.style.borderColor = "#414349"; };
+      valueBindings.set(name, () => {
+        if (document.activeElement !== input) input.value = String(widget.value ?? 1024);
+      });
+      wrap.append(caption, input);
+      return wrap;
     }
 
     const prompt = find("prompt");
@@ -193,7 +238,7 @@ app.registerExtension({
     promptEditor.setAttribute("aria-multiline", "true");
     promptEditor.dataset.placeholder = t("promptPlaceholder");
     promptEditor.className = "time-image-prompt-editor";
-    promptEditor.style.cssText = "min-height:112px;max-height:280px;overflow-y:auto;box-sizing:border-box;width:100%;margin:4px 0 12px;padding:10px 12px;background:#171819;color:#f1f2f4;border:1px solid #35373b;border-radius:8px;outline:none;font:13px/1.55 sans-serif;white-space:pre-wrap;overflow-wrap:anywhere";
+    promptEditor.style.cssText = "min-height:92px;max-height:240px;overflow-y:auto;box-sizing:border-box;width:100%;margin:3px 0 8px;padding:8px 10px;background:#171819;color:#f1f2f4;border:1px solid #35373b;border-radius:8px;outline:none;font:12px/1.5 sans-serif;white-space:pre-wrap;overflow-wrap:anywhere";
     const promptStyle = document.createElement("style");
     promptStyle.textContent = ".time-image-prompt-editor:empty::before{content:attr(data-placeholder);color:#777d85;pointer-events:none}.time-image-mention{display:inline-flex;align-items:center;gap:5px;vertical-align:middle;margin:0 2px;padding:2px 6px;border:1px solid #087c60;border-radius:6px;background:#12382e;color:#45ddb0;font:12px/1.3 sans-serif;white-space:nowrap}.time-image-mention img{width:18px;height:18px;object-fit:cover;border-radius:3px}.time-image-edge-input{appearance:textfield;-moz-appearance:textfield}.time-image-edge-input::-webkit-inner-spin-button,.time-image-edge-input::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}";
     promptEditor.addEventListener("focus", () => { promptEditor.style.borderColor = "#08b88a"; });
@@ -323,7 +368,15 @@ app.registerExtension({
       checkbox.onchange = () => { widget.value = checkbox.checked; widget.callback?.(widget.value); section.style.display = checkbox.checked ? "block" : "none"; syncPorts(); if (name === "enable_images") updateMP(); app.graph.setDirtyCanvas(true, true); };
       const text = document.createElement("span"); text.textContent = t(label); text.dataset.tiLabel = label;
       wrap.append(checkbox, text); toggles.append(wrap);
+      toggleBindings.set(name, { checkbox, section });
       section.style.display = checkbox.checked ? "block" : "none";
+    }
+    function syncToggleState() {
+      for (const [name, binding] of toggleBindings) {
+        const checked = Boolean(controls[name]?.value);
+        binding.checkbox.checked = checked;
+        binding.section.style.display = checked ? "block" : "none";
+      }
     }
 
     function updateMP() {
@@ -346,12 +399,16 @@ app.registerExtension({
         mpValue.textContent = image1MPValue.textContent = `${(width * height / 1e6).toFixed(2)} MP · ${width} × ${height}`;
         return;
       }
+      const mode = widgetValue("resolution_mode");
       const [rw, rh] = String(widgetValue("aspect_ratio") || "1:1").split(":").map(Number);
       const ratio = rw / rh;
       const multipleValue = widgetValue("round_to_multiple");
       const multiple = multipleValue === "OFF" ? null : Number(multipleValue || 32);
       let width, height;
-      if (widgetValue("resolution_mode") === "百万像素") {
+      if (mode === "自定义宽高") {
+        width = Math.max(1, Number(widgetValue("custom_width") || 1024));
+        height = Math.max(1, Number(widgetValue("custom_height") || 1024));
+      } else if (mode === "百万像素") {
         const area = Math.max(0.1, Number(widgetValue("megapixels") || 1)) * 1e6;
         width = Math.sqrt(area * ratio); height = width / ratio;
       } else {
@@ -371,15 +428,19 @@ app.registerExtension({
     }
 
     function updateCustomResolutionControls() {
-      const megapixelMode = widgetValue("resolution_mode") === "百万像素";
-      edgeControls.style.display = megapixelMode ? "none" : "flex";
+      const mode = widgetValue("resolution_mode");
+      const megapixelMode = mode === "百万像素";
+      const customMode = mode === "自定义宽高";
+      edgeControls.style.display = megapixelMode || customMode ? "none" : "flex";
       mpControl.style.display = megapixelMode ? "flex" : "none";
+      customDimensionControls.style.display = customMode ? "flex" : "none";
+      if (aspectRatioControl) aspectRatioControl.style.display = customMode ? "none" : "flex";
       resolutionModeBar.replaceChildren();
-      for (const mode of ["边长像素", "百万像素"]) {
+      for (const mode of ["边长像素", "自定义宽高", "百万像素"]) {
         const button = document.createElement("button");
         button.type = "button"; button.textContent = optionText("resolution_mode", mode);
         const active = widgetValue("resolution_mode") === mode;
-        button.style.cssText = `flex:1;padding:7px 9px;border:1px solid ${active ? "#08b88a" : "#34363a"};border-radius:6px;background:${active ? "#12382e" : "#292a2e"};color:${active ? "#29d6a5" : "#aeb2b8"};font-size:11px;font-weight:600;cursor:pointer`;
+        button.style.cssText = `flex:1;padding:5px 6px;border:1px solid ${active ? "#08b88a" : "#34363a"};border-radius:6px;background:${active ? "#12382e" : "#292a2e"};color:${active ? "#29d6a5" : "#aeb2b8"};font-size:10px;font-weight:600;cursor:pointer`;
         button.onclick = () => {
           const widget = controls.resolution_mode; widget.value = mode; widget.callback?.(mode);
           updateCustomResolutionControls(); updateMP(); resizeToFit(); app.graph.setDirtyCanvas(true, true);
@@ -389,6 +450,9 @@ app.registerExtension({
       updateMP();
     }
     mpInput.value = Number(widgetValue("megapixels") || 1).toFixed(1);
+    valueBindings.set("megapixels", () => {
+      if (document.activeElement !== mpInput) mpInput.value = Number(widgetValue("megapixels") || 1).toFixed(1);
+    });
     mpInput.addEventListener("input", () => {
       const value = Number(mpInput.value);
       if (!Number.isFinite(value) || value < 0.1 || value > 32) return;
@@ -412,6 +476,51 @@ app.registerExtension({
       for (const file of [...files].slice(0, MAX_IMAGES - items.length)) items.push({ name: await upload(file), enabled: true });
       write(items);
     }
+    function bindReplacementDrop(target, index) {
+      let dragDepth = 0;
+      const resetHighlight = () => {
+        dragDepth = 0;
+        target.style.outline = "";
+        target.style.outlineOffset = "";
+      };
+      target.title = `${t("previewImage")} · ${t("dropReplaceImage")}`;
+      target.addEventListener("dragenter", (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        dragDepth += 1;
+        target.style.outline = "2px solid #08b88a";
+        target.style.outlineOffset = "2px";
+      });
+      target.addEventListener("dragover", (event) => {
+        if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+      });
+      target.addEventListener("dragleave", (event) => {
+        event.stopPropagation();
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) resetHighlight();
+      });
+      target.addEventListener("drop", async (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resetHighlight();
+        const file = [...(event.dataTransfer?.files || [])].find((item) =>
+          item.type.startsWith("image/") || /\.(png|jpe?g|webp|bmp|gif|tiff?)$/i.test(item.name)
+        );
+        if (!file) return;
+        try {
+          const items = read();
+          if (!items[index]) return;
+          items[index].name = await upload(file, false);
+          write(items);
+        } catch (error) {
+          console.error("Failed to replace image by drop:", error);
+        }
+      });
+    }
     function imageURL(name) {
       const parts = name.split("/");
       return api.apiURL(`/view?filename=${encodeURIComponent(parts.pop())}&subfolder=${encodeURIComponent(parts.join("/"))}&type=input`);
@@ -423,8 +532,10 @@ app.registerExtension({
         const tile = document.createElement("div");
         tile.style.cssText = "position:relative;width:78px;flex:0 0 78px;text-align:center";
         const img = document.createElement("img"); img.src = imageURL(item.name); img.title = t("previewImage");
+        img.draggable = false;
         img.onload = updateMP;
         img.style.cssText = `width:62px;height:62px;object-fit:cover;border:1px solid ${item.enabled ? "#08b88a" : "#45474b"};border-radius:7px;cursor:zoom-in;background:#333;${item.enabled ? "" : "filter:grayscale(1);opacity:.45"}`;
+        bindReplacementDrop(img, index);
         img.onclick = () => { previewImage.src = imageURL(item.name); preview.style.display = "flex"; };
         const footer = document.createElement("div"); footer.style.cssText = "display:flex;align-items:center;justify-content:center;gap:4px;margin-top:3px;white-space:nowrap";
         const enable = document.createElement("input"); enable.type = "checkbox"; enable.checked = item.enabled !== false; enable.title = t("enableImage"); enable.style.cssText = "margin:0;flex:0 0 auto";
@@ -464,7 +575,7 @@ app.registerExtension({
     function checkboxRow(name, label, target, changed = () => {}) {
       const widget = controls[name]; if (!widget) return;
       const wrap = document.createElement("label");
-      wrap.style.cssText = "display:flex;align-items:center;gap:5px;color:#ddd;font-size:10px;cursor:pointer";
+      wrap.style.cssText = "display:flex;align-items:center;gap:5px;color:#ddd;font-size:11px;cursor:pointer";
       const input = document.createElement("input"); input.type = "checkbox"; input.checked = Boolean(widget.value);
       input.onchange = () => {
         widget.value = input.checked; widget.callback?.(widget.value);
@@ -473,6 +584,17 @@ app.registerExtension({
       input.style.accentColor = "#08b88a";
       const text = document.createElement("span"); text.textContent = t(label); text.dataset.tiLabel = label;
       wrap.append(input, text); target.append(wrap);
+      checkboxBindings.set(name, { input, changed });
+    }
+    function syncCheckboxState() {
+      for (const [name, binding] of checkboxBindings) {
+        const checked = Boolean(controls[name]?.value);
+        binding.input.checked = checked;
+        binding.changed();
+      }
+    }
+    function syncValueState() {
+      for (const sync of valueBindings.values()) sync();
     }
     function updateResolutionMode() {
       const fromImage1 = Boolean(controls.use_image1_resolution?.value);
@@ -513,13 +635,19 @@ app.registerExtension({
     imageSettings.append(maxEdgeChoices);
     imageSection.append(imageSettings, picker);
     checkboxRow("use_image1_resolution", "useImage1Resolution", modeRow, updateResolutionMode);
-    selectFor("aspect_ratio", "aspectRatio", ratioControls);
+    const aspectRatioControl = selectFor("aspect_ratio", "ratioValue", ratioControls);
     selectFor("round_to_multiple", "alignMultiple", ratioControls);
     selectFor("edge_limit", "edgeRule", edgeControls);
     selectFor("edge_resolution", "edgePixels", edgeControls);
+    for (const input of [
+      dimensionInputFor("custom_width", "customWidth"),
+      dimensionInputFor("custom_height", "customHeight"),
+    ]) {
+      if (input) customDimensionControls.append(input);
+    }
     const mpLabel = document.createElement("span"); mpLabel.textContent = t("megapixelsTarget"); mpLabel.dataset.tiLabel = "megapixelsTarget";
     mpControl.append(mpLabel, mpInput);
-    customResolution.append(resolutionModeBar, ratioControls, edgeControls, mpControl, mpValue);
+    customResolution.append(resolutionModeBar, ratioControls, edgeControls, mpControl, customDimensionControls, mpValue);
     image1Resolution.append(image1MPValue);
     sizeSection.append(modeRow, customResolution, image1Resolution);
     updateCustomResolutionControls();
@@ -561,38 +689,84 @@ app.registerExtension({
       getMinHeight: measuredRootHeight,
       getMaxHeight: measuredRootHeight,
     });
+    const nativeComputeSize = node.computeSize.bind(node);
     node.computeSize = () => {
-      const contentHeight = measuredRootHeight();
-      const portRows = Math.max(3 + (controls.enable_images?.value ? read().length : 0), 3);
-      const contentMinimum = 82 + contentHeight;
-      return [MIN_NODE_WIDTH, Math.max(190, contentMinimum, 62 + portRows * 24)];
+      // Keep LiteGraph's trailing widget clearance so the DOM panel and its
+      // border/padding remain safely inside the node frame.
+      const [width, height] = nativeComputeSize();
+      return [Math.max(MIN_NODE_WIDTH, width), height];
     };
     node.resizable = true;
     let applyingAutoSize = false;
+    let userResizing = false;
+    let manualHeight = 0;
     function resizeToFit() {
+      if (userResizing) return;
       const [minWidth, minHeight] = node.computeSize();
       const width = Math.max(minWidth, Number(node._timeManualWidth) || 0);
-      const height = Math.max(minHeight, Number(node._timeManualHeight) || 0);
+      const height = Math.max(minHeight, manualHeight);
       if (node.size?.[0] !== width || node.size?.[1] !== height) {
         applyingAutoSize = true; node.setSize([width, height]); applyingAutoSize = false;
       }
     }
+    const priorMouseDown = node.onMouseDown;
+    node.onMouseDown = function (event, pos) {
+      const result = priorMouseDown?.apply(this, arguments);
+      if (event?.button === 0 && pos?.[0] >= this.size[0] - 22 && pos?.[1] >= this.size[1] - 22) {
+        userResizing = true;
+        const targetNode = this;
+        const finishAfterCanvasEvent = () => setTimeout(() => targetNode.__finishTimePromptResize?.(), 0);
+        targetNode.__finishTimePromptResize = () => {
+          if (!userResizing) return;
+          userResizing = false;
+          targetNode._timeManualWidth = targetNode.size[0];
+          manualHeight = targetNode.size[1];
+          targetNode._timeManualHeight = manualHeight;
+          window.removeEventListener("pointerup", finishAfterCanvasEvent, true);
+          window.removeEventListener("mouseup", finishAfterCanvasEvent, true);
+          window.removeEventListener("blur", targetNode.__finishTimePromptResize, true);
+          resizeToFit();
+        };
+        window.addEventListener("pointerup", finishAfterCanvasEvent, true);
+        window.addEventListener("mouseup", finishAfterCanvasEvent, true);
+        window.addEventListener("blur", targetNode.__finishTimePromptResize, true);
+      }
+      return result;
+    };
+    const priorMouseUp = node.onMouseUp;
+    node.onMouseUp = function () {
+      const result = priorMouseUp?.apply(this, arguments);
+      this.__finishTimePromptResize?.();
+      return result;
+    };
     const priorResize = node.onResize;
     node.onResize = function () {
       const result = priorResize?.apply(this, arguments);
-      if (!applyingAutoSize) {
+      if (userResizing && !applyingAutoSize) {
         this._timeManualWidth = this.size[0];
-        this._timeManualHeight = this.size[1];
+        manualHeight = this.size[1];
       }
-      setTimeout(resizeToFit, 0);
+      if (!userResizing) setTimeout(resizeToFit, 0);
+      return result;
+    };
+    const originalSerialize = node.onSerialize;
+    node.onSerialize = function (data) {
+      const result = originalSerialize?.apply(this, arguments);
+      data.timeImageManualHeightV4 = manualHeight;
       return result;
     };
     const originalConfigure = node.onConfigure;
-    node.onConfigure = function () {
+    node.onConfigure = function (data) {
       const result = originalConfigure?.apply(this, arguments);
+      // Ignore legacy height keys: they may contain an oversized value captured
+      // by earlier auto-sizing builds and leave a large blank tail.
+      manualHeight = Math.max(0, Number(data?.timeImageManualHeightV4) || 0);
+      this._timeManualHeight = manualHeight;
       setTimeout(() => {
         if (!this._timeManualWidth && this.size?.[0] > MIN_NODE_WIDTH) this._timeManualWidth = this.size[0];
-        renderPrompt(prompt?.value || ""); render(); syncPorts(); updateResolutionMode(); resizeToFit();
+        renderPrompt(prompt?.value || ""); render();
+        syncToggleState(); syncValueState(); syncCheckboxState();
+        syncPorts(); updateResolutionMode(); resizeToFit();
       }, 0);
       return result;
     };

@@ -2,41 +2,215 @@
   "PromptImageResolution": {
     "display_name": "Time・Prompt + Images + Resolution",
     "inputs": {
-      "prompt": { "name": "Prompt" },
-      "aspect_ratio": { "name": "Aspect ratio" },
+      "prompt": {
+        "name": "Prompt"
+      },
+      "aspect_ratio": {
+        "name": "Aspect ratio"
+      },
       "edge_limit": {
         "name": "Edge rule",
-        "options": { "最小边": "Shortest edge", "最大边": "Longest edge" }
+        "options": {
+          "最小边": "Shortest edge",
+          "最大边": "Longest edge"
+        }
       },
-      "edge_resolution": { "name": "Edge pixels" },
+      "edge_resolution": {
+        "name": "Edge pixels"
+      },
       "resolution_mode": {
         "name": "Resolution mode",
-        "options": { "边长像素": "Side pixels", "百万像素": "Megapixels" }
+        "options": {
+          "边长像素": "Aspect Ratio",
+          "自定义宽高": "Custom size",
+          "百万像素": "Megapixels"
+        }
       },
-      "megapixels": { "name": "Megapixel target" },
-      "round_to_multiple": { "name": "Align to multiple", "options": { "OFF": "Off" } },
-      "enable_images": { "name": "Enable images" },
-      "limit_image_max_edge": { "name": "Limit image max edge" },
-      "image_max_edge": { "name": "Max image edge (px)" },
-      "enable_resolution": { "name": "Enable resolution" },
-      "use_image1_resolution": { "name": "Use Image 1 resolution" },
-      "image_snap_multiple": { "name": "Align all images to multiple of", "options": { "OFF": "Off" } },
-      "images": { "name": "Images" }
+      "megapixels": {
+        "name": "Megapixel target"
+      },
+      "round_to_multiple": {
+        "name": "Align to multiple",
+        "options": {
+          "OFF": "Off"
+        }
+      },
+      "enable_images": {
+        "name": "Enable images"
+      },
+      "limit_image_max_edge": {
+        "name": "Limit image max edge"
+      },
+      "image_max_edge": {
+        "name": "Max image edge (px)"
+      },
+      "enable_resolution": {
+        "name": "Enable resolution"
+      },
+      "use_image1_resolution": {
+        "name": "Use Image 1 resolution"
+      },
+      "image_snap_multiple": {
+        "name": "Align all images to multiple of",
+        "options": {
+          "OFF": "Off"
+        }
+      },
+      "images": {
+        "name": "Images"
+      },
+      "custom_width": {
+        "name": "Custom width"
+      },
+      "custom_height": {
+        "name": "Custom height"
+      }
     },
     "outputs": {
-      "0": { "name": "Width" },
-      "1": { "name": "Height" },
-      "2": { "name": "Prompt" },
-      "3": { "name": "Image 1" },
-      "4": { "name": "Image 2" },
-      "5": { "name": "Image 3" },
-      "6": { "name": "Image 4" },
-      "7": { "name": "Image 5" },
-      "8": { "name": "Image 6" },
-      "9": { "name": "Image 7" },
-      "10": { "name": "Image 8" },
-      "11": { "name": "Image 9" },
-      "12": { "name": "Image 10" }
+      "0": {
+        "name": "Width"
+      },
+      "1": {
+        "name": "Height"
+      },
+      "2": {
+        "name": "Prompt"
+      },
+      "3": {
+        "name": "Image 1"
+      },
+      "4": {
+        "name": "Image 2"
+      },
+      "5": {
+        "name": "Image 3"
+      },
+      "6": {
+        "name": "Image 4"
+      },
+      "7": {
+        "name": "Image 5"
+      },
+      "8": {
+        "name": "Image 6"
+      },
+      "9": {
+        "name": "Image 7"
+      },
+      "10": {
+        "name": "Image 8"
+      },
+      "11": {
+        "name": "Image 9"
+      },
+      "12": {
+        "name": "Image 10"
+      }
+    }
+  },
+  "PanoramaViewer": {
+    "display_name": "Time・Panorama Viewer",
+    "description": "Inspect the panorama and output the current view or a selected multi-view perspective.",
+    "inputs": {
+      "image": {
+        "name": "Panorama image"
+      },
+      "multi_view": {
+        "name": "Multi-view"
+      },
+      "selected_view": {
+        "name": "Selected view"
+      },
+      "camera_yaw": {
+        "name": "Camera yaw"
+      },
+      "camera_pitch": {
+        "name": "Camera pitch"
+      },
+      "camera_fov": {
+        "name": "Camera field of view"
+      },
+      "view_aspect": {
+        "name": "Output aspect ratio"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Image"
+      }
+    }
+  },
+  "CacheCleaner": {
+    "display_name": "Time・Cache Cleaner",
+    "description": "Unload models or clear node execution cache after the current workflow finishes.",
+    "inputs": {
+      "clear_model_cache": {
+        "name": "Clear model cache"
+      },
+      "clear_other_cache": {
+        "name": "Clear execution cache"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Status"
+      }
+    }
+  },
+  "EditComposite": {
+    "display_name": "Time・Offset Repair",
+    "description": "Automatically align an AI edit, preserve unchanged areas, and optionally feather the control mask.",
+    "inputs": {
+      "edited_image": {
+        "name": "Edited image"
+      },
+      "original_image": {
+        "name": "Original image"
+      },
+      "mask_feather": {
+        "name": "Mask feather (px)"
+      },
+      "mask": {
+        "name": "Local composite mask"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "Composited image"
+      },
+      "1": {
+        "name": "Change mask"
+      }
+    }
+  },
+  "PlaySound": {
+    "display_name": "Time・Play Sound",
+    "description": "Play a completion chime in the ComfyUI browser when this node runs.",
+    "inputs": {
+      "image": {
+        "name": "Trigger image"
+      },
+      "volume": {
+        "name": "Volume"
+      }
+    }
+  },
+  "TimeGGUFLoader": {
+    "display_name": "Time・GGUF UNET Loader",
+    "description": "Load a GGUF UNET through the installed GGUF Loader extension.",
+    "inputs": {
+      "gguf_name": {
+        "name": "GGUF UNET"
+      }
+    }
+  },
+  "TimeTextLabel": {
+    "display_name": "Time・Text Label",
+    "description": "Canvas text label. Double-click to edit; right-click for text properties.",
+    "inputs": {
+      "text": {
+        "name": "Text"
+      }
     }
   }
 }

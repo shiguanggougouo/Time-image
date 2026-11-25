@@ -1,13 +1,19 @@
 # Time image
 
-Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本 **2.1.0**。下面按节点顺序说明：先介绍提示词、参考图与分辨率一体节点，再介绍图像和遮罩对齐节点。
+Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本 **2.6.2**。下面按顺序介绍提示词、图像与分辨率节点、图像和遮罩对齐节点、全景图查看器、缓存清理器、偏移修复、完成提示音、专用 GGUF 模型加载器，以及文字标签。
 
 | 顺序 | 节点 | 适合做什么 |
 | --- | --- | --- |
 | 1 | **Time・Prompt + Images + Resolution**（中文界面：Time・提示词 + 图像 + 分辨率） | 写提示词、放参考图、设置生成尺寸。 |
 | 2 | **Time・Res Fixer (Img/Mask)** | 将已有图像和可选遮罩对齐到指定倍数的尺寸。 |
+| 3 | **Time・Panorama Viewer**（中文界面：Time・全景图查看器） | 交互查看全景图，并将当前视角或选中的多视角透视图输出。 |
+| 4 | **Time・Cache Cleaner**（中文界面：Time・缓存清理器） | 在工作流完成后，按开关清理模型或节点执行缓存。 |
+| 5 | **Time・Offset Repair**（中文界面：Time・偏移修复） | 自动识别 AI 编辑后的变化，只把改动合成回原图并尽量保留背景。 |
+| 6 | **Time・Play Sound**（中文界面：Time・播放声音） | 工作流运行到此节点时，在浏览器播放短提示音，并可调节音量。 |
+| 7 | **Time・GGUF UNET Loader** | 使用已安装的 GGUF Loader 加载 GGUF UNET。 |
+| 8 | **Time・文字标签** | 在画布直接显示说明文字；双击编辑，右键设置字号和颜色。 |
 
-两个节点都不需要下载模型，也不需要额外安装 Python 包。
+这些节点不需要下载模型或模型权重。图像合成器使用 OpenCV；当前 ComfyUI 环境已提供，无需另行安装。如果移植到没有 OpenCV 的环境，需要在该 ComfyUI 的 Python 环境安装 `opencv-python`。
 
 ## 安装
 
@@ -22,11 +28,13 @@ Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本
 
 这个节点把提示词、参考图和目标宽高放在一起。默认只显示提示词；勾选 **图片（Images）** 或 **分辨率（Resolution）** 后，才会展开相应设置。
 
+保存工作流时，图片、分辨率、限制图像最大边、使用图像 1 分辨率，以及每张图的启用状态都会一起保存；切换到其他工作流再切回来时，会按工作流保存的状态恢复。
+
 ### 使用步骤
 
 1. **写提示词**：在提示词框输入内容。先导入图片，再输入 `@` 可从已导入图片中选择；选中后会插入带缩略图的 `<Picture N>` 标记。直接输入 `@图1`、`@图像1` 也会自动转成同样的标记。
 2. **添加参考图（可选）**：打开 **图片**，点击 `+` 或把图片拖到节点里，最多 10 张。每张图片旁可单独启用或停用；点击 **替换图1**、**替换图2** 等按钮可更换对应图片，点击缩略图右上角 `×` 删除，点击缩略图可放大预览。英文界面会显示 **Replace Image 1** 等文字。
-3. **设置尺寸（可选）**：打开 **分辨率**，选择宽高比（`1:1`、`3:2`、`2:3`、`4:3`、`3:4`、`16:9`、`9:16`、`21:9`、`9:21`），再选择「边长像素」或「百万像素」模式。边长像素可指定为最小边或最大边；可选预设，也可直接输入数字。尺寸对齐可选「关闭」、8、16、32 或 64。
+3. **设置尺寸（可选）**：打开 **分辨率**，选择「宽高比」「自定宽高」或「百万像素」模式。宽高比模式包含 `2:1` 和 `1:2`，并可设定边长像素；自定宽高模式可直接输入宽度和高度。尺寸对齐可选「关闭」、8、16、32 或 64。
 4. **连接输出**：将 `宽度`、`高度` 接到需要宽高的节点；将 `提示词` 接到文本编码节点（例如 CLIP Text Encode）的文本输入；将 `图像 1`、`图像 2` 等接到模型的图像输入。
 
 ### 图片设置
@@ -41,6 +49,7 @@ Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本
 
 - **边长像素**：输入边长像素，并选择它表示最小边还是最大边；另一边按宽高比计算。支持预设，也支持手动输入 64–16384。
 - **百万像素**：直接输入百万像素目标，节点按宽高比计算最终宽高。
+- **自定义宽高**：分别输入宽度和高度像素；所选对齐倍数仍会应用到最终尺寸。
 - **对齐倍数**：选择「关闭」、8、16、32 或 64。选择「关闭」时取整到像素；选择数值时会将宽高对齐到该倍数。
 - **使用图像 1 分辨率**：使用第一张图的宽高，替代自定义分辨率。启用时需要先导入图像 1。
 - 底部绿色结果行实时显示最终 MP 和宽高，例如 `1.05 MP · 1024 × 1024`。关闭 **分辨率** 时，宽高输出为 `1024 × 1024`。
@@ -91,6 +100,68 @@ Time image 是一个包含 **两个 ComfyUI 节点** 的小套装，当前版本
 | `mask` | `MASK` | 与图像同步对齐的遮罩；未连接遮罩时输出空白遮罩。 |
 | `width`、`height` | `INT` | 对齐后的画布宽高。 |
 
+## 3. Time・Panorama Viewer
+
+将等距柱状全景图接到 `全景图`，运行后可拖动预览旋转、滚轮缩放。图像输出口会输出画布当前视角对应的透视图。
+
+打开 **展开多视角** 后会显示前、右、后、左四个方向的预览卡片。点击卡片选择视角，再运行工作流，图像输出口就会得到该方向的透视图；关闭开关时输出画布当前视角。视角图默认宽边为 1024 像素，画面比例跟随查看器。批次输入会对每张图应用相同视角。
+
+此节点适用于常见的 **2:1 等距柱状全景图**。其他比例也会尝试投影，但效果可能不正确。
+
+### 输出
+
+| 输出 | 类型 | 内容 |
+| --- | --- | --- |
+| `图像`（`image`） | `IMAGE` | 当前视角或所选多视角的透视图。 |
+
+## 4. Time・Cache Cleaner
+
+将节点放入工作流并运行，即会在本轮工作流全部结束后执行所选清理，避免在采样或模型仍被使用时中途卸载。
+
+- **清理模型缓存**：卸载 ComfyUI 管理的已加载模型，释放它们占用的显存；下次使用时需要重新加载。默认关闭，适合需要反复使用固定模型的工作流。
+- **清理执行缓存**：清空节点执行结果缓存，并回收未被引用的 Python 对象和 PyTorch 未使用的显存缓存。模型开关关闭时，已加载模型会保留；节点结果缓存清空后，下次运行可能需要重新计算节点。
+- 两个开关都关闭时不执行清理。只想保留固定模型并清理执行结果时，只开启 **清理执行缓存**。
+
+### 输出
+
+| 输出 | 类型 | 内容 |
+| --- | --- | --- |
+| `状态`（`status`） | `STRING` | 本次缓存清理操作的状态。 |
+
+## 5. Time・Offset Repair
+
+当 AI 编辑图与原图大体保持同一构图，但生成结果顺带改变了背景色调或其它未编辑区域时，使用此节点把改动区域合成回原图。
+
+### 使用步骤
+
+1. 把 AI 编辑后的结果接到 **编辑后图像**（第一个图像输入）。
+2. 把未编辑的原图接到 **原图**（第二个图像输入）。
+3. 如果只允许局部合成，把区域遮罩接到可选的 **局部合成遮罩**：白色区域应用修复结果，黑色区域保留对齐后的编辑图；遮罩会限制修复范围。可用 **遮罩羽化（像素）** 柔化两者边界；范围为 `0–256` 像素，默认 `0`。
+4. 将 **合成图像** 接到后续工作流。可选地查看 **改动遮罩**：显示修复范围内自动检测到的编辑贡献；灰色边缘表示柔和过渡。
+
+节点内部会自动进行特征配准、稳健色彩匹配、改动检测和柔边合成，不需要额外参数或模型。可选遮罩能把合成限制在手选区域内。两张图尺寸不同时会尝试自动对齐，合成结果保持原图尺寸。支持单张图，也支持相同长度的批次；单张图或遮罩可复用于一个批次。
+
+适合局部修改、人物或物体替换等“主体场景基本不变”的编辑。若编辑结果改变了镜头、构图或大部分场景，自动识别的范围可能扩大，建议先检查 **改动遮罩**。
+
+### 输出
+
+| 输出 | 类型 | 内容 |
+| --- | --- | --- |
+| `合成图像`（`composited_image`） | `IMAGE` | 将编辑区域融入原图、其它区域尽量保留原图的结果。 |
+| `改动遮罩`（`change_mask`） | `MASK` | 软遮罩；显示修复范围内检测到的编辑贡献。 |
+
+## 6. Time・Play Sound
+
+把最终图像（例如 **保存图像** 节点的 `images` 输出）接到 **触发图像**。工作流运行到此节点时，ComfyUI 页面会播放一声短促清脆的提示音；可用 **音量** 滑块调节音量。
+
+## 7. Time・GGUF UNET Loader
+
+仅加载 `.gguf` 文件，并直接使用已安装的 **GGUF Loader** 扩展。需要先安装并启用提供 `LoaderGGUF` 的 GGUF 节点。
+
+## 8. Time・文字标签
+
+这是一个只在画布显示的说明标签，没有输入、输出或计算功能。双击文字可编辑内容（支持换行）；右键节点并选择 **文字属性…**，可以设置字号和文字颜色。文字和样式会随工作流保存。
+
 ## License
 
 MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代码或模型权重，可商用。
@@ -99,14 +170,20 @@ MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代�
 
 # English
 
-Time image is a small pack of **two ComfyUI nodes**, currently at version **2.1.0**. The nodes are described in order below: first the all-in-one prompt, reference images and resolution node, then the image-and-mask alignment node.
+Time image is a small pack of **eight ComfyUI nodes**, currently at version **2.6.2**. The nodes are described in order below: prompt, images and resolution; image-and-mask alignment; panorama viewer; cache cleaner; AI edit compositing; a completion chime; a dedicated GGUF loader; and a text label.
 
 | Order | Node | What it is for |
 | --- | --- | --- |
 | 1 | **Time・Prompt + Images + Resolution** (Chinese UI: Time・提示词 + 图像 + 分辨率) | Write a prompt, add reference images, and set the output size. |
 | 2 | **Time・Res Fixer (Img/Mask)** | Align an existing image and an optional mask to dimensions divisible by a chosen multiple. |
+| 3 | **Time・Panorama Viewer** (Chinese UI: Time・全景图查看器) | Inspect a panorama and output the current camera view or a selected multi-view perspective. |
+| 4 | **Time・Cache Cleaner** (Chinese UI: Time・缓存清理器) | Clear model or node execution caches after the workflow finishes. |
+| 5 | **Time・Offset Repair** (Chinese UI: Time・偏移修复) | Detect changes in an AI edit, composite them into the original, and preserve the background where possible. |
+| 6 | **Time・Play Sound** (Chinese UI: Time・播放声音) | Play an adjustable-volume completion chime when the workflow reaches this node. |
+| 7 | **Time・GGUF UNET Loader** | Load GGUF UNETs through the installed GGUF Loader extension. |
+| 8 | **Time・Text Label** (Chinese UI: Time・文字标签) | Show text on the canvas; double-click to edit and right-click to set its size and color. |
 
-Neither node downloads models or needs extra Python packages.
+These nodes do not download models or model weights. The image compositing node uses OpenCV, which is already available in this ComfyUI environment. If you move it to an installation without OpenCV, install `opencv-python` in that ComfyUI Python environment.
 
 ## Installation
 
@@ -121,11 +198,13 @@ Manual install: put the `Time-image` folder in `ComfyUI/custom_nodes/`, then sta
 
 This node keeps the prompt, reference images and target width/height together. By default only the prompt is visible; tick **Images** or **Resolution** to reveal the corresponding settings.
 
+When you save a workflow, the Images and Resolution switches, the maximum-edge limit, Use Image 1 resolution, and each image's enabled state are saved with it and restored when you return to that workflow.
+
 ### Your first workflow in four steps
 
 1. **Write the prompt:** type in the prompt box. Import images first, then type `@` to pick one; a `<Picture N>` marker with a thumbnail is inserted. Typing `@图1` or `@图像1` is converted to the same marker automatically.
 2. **Add reference images (optional):** enable **Images**, press `+` or drag files onto the node — up to 10. Each image can be enabled or disabled on its own. Use the **Replace Image 1**, **Replace Image 2**, … buttons to swap an image, the `×` on a thumbnail to delete it, and click a thumbnail to enlarge it. The Chinese UI shows **替换图1** and so on.
-3. **Set the size (optional):** enable **Resolution**, pick an aspect ratio (`1:1`, `3:2`, `2:3`, `4:3`, `3:4`, `16:9`, `9:16`, `21:9`, `9:21`), then choose **Side pixels** or **Megapixels**. Side pixels can mean the shortest or longest edge; presets and manual values are both available. Alignment can be `OFF`, 8, 16, 32 or 64.
+3. **Set the size (optional):** enable **Resolution**, then select **Aspect Ratio**, **Custom Size** or **Megapixels**. Aspect Ratio includes `2:1` and `1:2`, with an edge-pixel setting; Custom Size lets you enter width and height directly. Alignment can be `OFF`, 8, 16, 32 or 64.
 4. **Wire the outputs:** connect `width` / `height` to any size input, `prompt` to a text encoder (for example CLIP Text Encode), and `image_1`, `image_2`, … to the image inputs of your model.
 
 ### Image options
@@ -140,6 +219,7 @@ This node keeps the prompt, reference images and target width/height together. B
 
 - **Side pixels:** enter the edge length and choose whether it is the shortest or longest edge; the other edge follows the aspect ratio. Presets are available, or type any value from 64 to 16384.
 - **Megapixels:** enter a megapixel target; the node derives width and height from the aspect ratio.
+- **Custom size:** enter width and height in pixels; the selected alignment still applies to the final dimensions.
 - **Align to multiple:** `OFF`, 8, 16, 32 or 64. `OFF` rounds to whole pixels; a number rounds both dimensions to that multiple.
 - **Use Image 1 resolution:** use the first image's size instead of a custom resolution. Image 1 must be imported first.
 - The green result line shows the final MP and size live, e.g. `1.05 MP · 1024 × 1024`. With **Resolution** off, the output is `1024 × 1024`.
@@ -189,6 +269,68 @@ Common picks: `8` or `64` for SD / SDXL latents, `14` or `28` for patch-14 style
 | `image` | `IMAGE` | The aligned image. |
 | `mask` | `MASK` | The mask aligned with the image; empty when no mask is connected. |
 | `width`, `height` | `INT` | The aligned canvas width and height. |
+
+## 3. Time・Panorama Viewer
+
+Connect an equirectangular panorama to `Panorama image` and run the workflow. Drag the preview to rotate and scroll to zoom. The image output returns a perspective crop of the current viewer angle.
+
+Enable **Multi-view** to show Front, Right, Back and Left preview cards. Select a card and run the workflow to send that perspective to the image output. With the switch off, the output uses the current viewer angle. The output is 1024 pixels on its long edge and follows the viewer aspect ratio. Batches receive the same selected view.
+
+The viewer is designed for common **2:1 equirectangular panoramas**. Other ratios are projected as well, but may look incorrect.
+
+### Output
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `Image` (`image`) | `IMAGE` | The current or selected perspective view. |
+
+## 4. Time・Cache Cleaner
+
+Add this node to a workflow and queue it. Cleanup is scheduled for after the whole workflow finishes, so models are not unloaded while sampling or other nodes still need them.
+
+- **Clear model cache:** unloads ComfyUI-managed models and frees their VRAM. They must be loaded again when next used. Off by default, which suits workflows that repeatedly use the same models.
+- **Clear execution cache:** clears cached node execution results, runs Python garbage collection, and empties unused PyTorch device-memory cache. With the model switch off, loaded models stay resident; cached node results are cleared, so some nodes may need to run again on the next prompt.
+- If both switches are off, no cleanup is scheduled. To keep fixed models loaded while clearing execution results, enable only **Clear execution cache**.
+
+### Output
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `Status` (`status`) | `STRING` | The status of the scheduled cache cleanup. |
+
+## 5. Time・Offset Repair
+
+Use this node when an AI-edited image keeps roughly the same composition as the original, but also changes background colors or other areas you wanted to keep.
+
+### Steps
+
+1. Connect the AI result to **Edited image** (the first image input).
+2. Connect the untouched image to **Original image** (the second image input).
+3. To restrict compositing to a selected area, connect a region mask to **Local composite mask**. White applies the repaired result; black keeps the aligned edited image. Set **Mask feather (px)** to soften the boundary; it ranges from `0` to `256` pixels and defaults to `0`.
+4. Send **Composited image** to the next node. Optionally inspect **Change mask**: shows detected edit contribution inside the repair mask; gray edges provide a soft transition.
+
+The node automatically aligns the images, matches color from structurally stable regions, detects changes and blends soft edges. It has no model downloads. **Mask feather (px)** controls how softly the optional mask edge blends; it defaults to `0`. White mask areas receive the repaired result, while black areas preserve the aligned edited image. Different input sizes are automatically aligned when possible; the result keeps the original image dimensions. Single images and equal-length batches are supported; a single image or mask can be reused against a batch.
+
+It works best for local edits, such as changing a person or object while keeping the scene and camera mostly unchanged. If the edit changes the camera, composition or most of the scene, the detected mask may cover a larger area, so inspect **Change mask** first.
+
+### Outputs
+
+| Output | Type | Notes |
+| --- | --- | --- |
+| `Composited image` (`composited_image`) | `IMAGE` | The edit blended into the original, with other areas preserved where possible. |
+| `Change mask` (`change_mask`) | `MASK` | A soft mask showing detected edit contribution inside the repair mask. |
+
+## 6. Time・Play Sound
+
+Connect the final image, such as the `images` output of **Save Image**, to **Trigger image**. When the workflow reaches this node, the ComfyUI browser plays a short, bright chime. Adjust its loudness with the **Volume** slider.
+
+## 7. Time・GGUF UNET Loader
+
+Loads only `.gguf` files through the installed **GGUF Loader** extension. Install and enable a GGUF node that provides `LoaderGGUF` first.
+
+## 8. Time・Text Label
+
+This is a canvas-only label with no inputs, outputs, or execution logic. Double-click the text to edit it (line breaks are supported). Right-click the node and choose **Text properties…** to adjust the font size and text color. The text and style are saved with the workflow.
 
 ## License
 

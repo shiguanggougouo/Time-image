@@ -2,41 +2,215 @@
   "PromptImageResolution": {
     "display_name": "Time・提示词 + 图像 + 分辨率",
     "inputs": {
-      "prompt": { "name": "提示词" },
-      "aspect_ratio": { "name": "宽高比" },
+      "prompt": {
+        "name": "提示词"
+      },
+      "aspect_ratio": {
+        "name": "宽高比"
+      },
       "edge_limit": {
         "name": "边长规则",
-        "options": { "最小边": "最小边", "最大边": "最大边" }
+        "options": {
+          "最小边": "最小边",
+          "最大边": "最大边"
+        }
       },
-      "edge_resolution": { "name": "边长像素" },
+      "edge_resolution": {
+        "name": "边长像素"
+      },
       "resolution_mode": {
         "name": "分辨率模式",
-        "options": { "边长像素": "边长像素", "百万像素": "百万像素" }
+        "options": {
+          "边长像素": "宽高比",
+          "自定义宽高": "自定宽高",
+          "百万像素": "百万像素"
+        }
       },
-      "megapixels": { "name": "百万像素目标" },
-      "round_to_multiple": { "name": "对齐倍数", "options": { "OFF": "关闭" } },
-      "enable_images": { "name": "启用图像" },
-      "limit_image_max_edge": { "name": "限制图像最大边" },
-      "image_max_edge": { "name": "最大边像素" },
-      "enable_resolution": { "name": "启用分辨率" },
-      "use_image1_resolution": { "name": "使用图像 1 分辨率" },
-      "image_snap_multiple": { "name": "所有图像对齐倍数", "options": { "OFF": "关闭" } },
-      "images": { "name": "图像" }
+      "megapixels": {
+        "name": "百万像素目标"
+      },
+      "round_to_multiple": {
+        "name": "对齐倍数",
+        "options": {
+          "OFF": "关闭"
+        }
+      },
+      "enable_images": {
+        "name": "启用图像"
+      },
+      "limit_image_max_edge": {
+        "name": "限制图像最大边"
+      },
+      "image_max_edge": {
+        "name": "最大边像素"
+      },
+      "enable_resolution": {
+        "name": "启用分辨率"
+      },
+      "use_image1_resolution": {
+        "name": "使用图像 1 分辨率"
+      },
+      "image_snap_multiple": {
+        "name": "所有图像对齐倍数",
+        "options": {
+          "OFF": "关闭"
+        }
+      },
+      "images": {
+        "name": "图像"
+      },
+      "custom_width": {
+        "name": "自定义宽度"
+      },
+      "custom_height": {
+        "name": "自定义高度"
+      }
     },
     "outputs": {
-      "0": { "name": "宽度" },
-      "1": { "name": "高度" },
-      "2": { "name": "提示词" },
-      "3": { "name": "图像 1" },
-      "4": { "name": "图像 2" },
-      "5": { "name": "图像 3" },
-      "6": { "name": "图像 4" },
-      "7": { "name": "图像 5" },
-      "8": { "name": "图像 6" },
-      "9": { "name": "图像 7" },
-      "10": { "name": "图像 8" },
-      "11": { "name": "图像 9" },
-      "12": { "name": "图像 10" }
+      "0": {
+        "name": "宽度"
+      },
+      "1": {
+        "name": "高度"
+      },
+      "2": {
+        "name": "提示词"
+      },
+      "3": {
+        "name": "图像 1"
+      },
+      "4": {
+        "name": "图像 2"
+      },
+      "5": {
+        "name": "图像 3"
+      },
+      "6": {
+        "name": "图像 4"
+      },
+      "7": {
+        "name": "图像 5"
+      },
+      "8": {
+        "name": "图像 6"
+      },
+      "9": {
+        "name": "图像 7"
+      },
+      "10": {
+        "name": "图像 8"
+      },
+      "11": {
+        "name": "图像 9"
+      },
+      "12": {
+        "name": "图像 10"
+      }
+    }
+  },
+  "PanoramaViewer": {
+    "display_name": "Time・全景图查看器",
+    "inputs": {
+      "image": {
+        "name": "全景图"
+      },
+      "multi_view": {
+        "name": "展开多视角"
+      },
+      "selected_view": {
+        "name": "所选视角"
+      },
+      "camera_yaw": {
+        "name": "当前水平角度"
+      },
+      "camera_pitch": {
+        "name": "当前垂直角度"
+      },
+      "camera_fov": {
+        "name": "当前视野"
+      },
+      "view_aspect": {
+        "name": "输出画面比例"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "图像"
+      }
+    },
+    "description": "交互查看全景图，将当前视角或所选多视角透视图输出到图像接口。"
+  },
+  "CacheCleaner": {
+    "display_name": "Time・缓存清理器",
+    "description": "在当前工作流执行结束后，按开关卸载模型或清理节点执行缓存。",
+    "inputs": {
+      "clear_model_cache": {
+        "name": "清理模型缓存"
+      },
+      "clear_other_cache": {
+        "name": "清理执行缓存"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "状态"
+      }
+    }
+  },
+  "EditComposite": {
+    "display_name": "Time・偏移修复",
+    "description": "自动对齐 AI 编辑图与原图，只合成改动区域并保留原图背景；可设置遮罩羽化。",
+    "inputs": {
+      "edited_image": {
+        "name": "编辑后图像"
+      },
+      "original_image": {
+        "name": "原图"
+      },
+      "mask_feather": {
+        "name": "遮罩羽化（像素）"
+      },
+      "mask": {
+        "name": "局部合成遮罩"
+      }
+    },
+    "outputs": {
+      "0": {
+        "name": "合成图像"
+      },
+      "1": {
+        "name": "改动遮罩"
+      }
+    }
+  },
+  "PlaySound": {
+    "display_name": "Time・播放声音",
+    "description": "工作流执行到此节点时，在 ComfyUI 页面播放完成提示音。",
+    "inputs": {
+      "image": {
+        "name": "触发图像"
+      },
+      "volume": {
+        "name": "音量"
+      }
+    }
+  },
+  "TimeGGUFLoader": {
+    "display_name": "Time・GGUF UNET Loader",
+    "description": "通过已安装的 GGUF Loader 扩展加载 GGUF UNET。",
+    "inputs": {
+      "gguf_name": {
+        "name": "GGUF 模型"
+      }
+    }
+  },
+  "TimeTextLabel": {
+    "display_name": "Time・文字标签",
+    "description": "画布文字标签。双击编辑文字，右键设置文字属性。",
+    "inputs": {
+      "text": {
+        "name": "文字"
+      }
     }
   }
 }

@@ -1,6 +1,10 @@
 {
   "nodeCategories": {
     "图像": "图像",
-    "Time AI/图像": "Time AI/图像"
+    "Time AI/图像": "Time AI/图像",
+    "工具": "工具",
+    "Time AI/工具": "Time AI/工具",
+    "模型加载": "模型加载",
+    "Time AI/模型加载": "Time AI/模型加载"
   }
 }
