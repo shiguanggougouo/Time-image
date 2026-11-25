@@ -1,6 +1,6 @@
 # Time image
 
-Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本 **2.6.3**。下面按顺序介绍提示词、图像与分辨率节点、图像和遮罩对齐节点、全景图查看器、缓存清理器、偏移修复、完成提示音、专用 GGUF 模型加载器，以及文字标签。
+Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本 **2.6.4**。下面按顺序介绍提示词、图像与分辨率节点、图像和遮罩对齐节点、全景图查看器、缓存清理器、偏移修复、完成提示音、专用 GGUF 模型加载器，以及文字标签。
 
 | 顺序 | 节点 | 适合做什么 |
 | --- | --- | --- |
@@ -136,6 +136,8 @@ Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本
 
 ### 使用步骤
 
+> 两个图像输入现在都是可选的：只接一张时会直接透传该图并输出空白改动遮罩；两张都断开时输出 1×1 空白图像与遮罩，方便临时断开调试而不报错。
+
 1. 把 AI 编辑后的结果接到 **编辑后图像**（第一个图像输入）。
 2. 把未编辑的原图接到 **原图**（第二个图像输入）。
 3. 如果只允许局部合成，把区域遮罩接到可选的 **局部合成遮罩**：白色区域应用修复结果，黑色区域保留对齐后的编辑图；遮罩会限制修复范围。可用 **遮罩羽化（像素）** 柔化两者边界；范围为 `0–256` 像素，默认 `0`。
@@ -174,7 +176,7 @@ MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代�
 
 # English
 
-Time image is a small pack of **eight ComfyUI nodes**, currently at version **2.6.3**. The nodes are described in order below: prompt, images and resolution; image-and-mask alignment; panorama viewer; cache cleaner; AI edit compositing; a completion chime; a dedicated GGUF loader; and a text label.
+Time image is a small pack of **eight ComfyUI nodes**, currently at version **2.6.4**. The nodes are described in order below: prompt, images and resolution; image-and-mask alignment; panorama viewer; cache cleaner; AI edit compositing; a completion chime; a dedicated GGUF loader; and a text label.
 
 | Order | Node | What it is for |
 | --- | --- | --- |
@@ -309,6 +311,8 @@ Add this node to a workflow and queue it. Cleanup is scheduled for after the who
 Use this node when an AI-edited image keeps roughly the same composition as the original, but also changes background colors or other areas you wanted to keep.
 
 ### Steps
+
+> Both image inputs are optional now: with only one connected, that image is passed through with an empty change mask; with neither connected, the node returns a 1x1 blank image and mask so it can stay in a workflow while you debug.
 
 1. Connect the AI result to **Edited image** (the first image input).
 2. Connect the untouched image to **Original image** (the second image input).

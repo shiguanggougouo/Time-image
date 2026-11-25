@@ -343,11 +343,11 @@ class EditComposite:
     def INPUT_TYPES(cls):
         return {
             "required": {
-                "edited_image": ("IMAGE",),
-                "original_image": ("IMAGE",),
                 "mask_feather": ("INT", {"default": 0, "min": 0, "max": 256, "step": 1}),
             },
             "optional": {
+                "edited_image": ("IMAGE",),
+                "original_image": ("IMAGE",),
                 "mask": ("MASK",),
             },
         }
@@ -359,19 +359,28 @@ class EditComposite:
     DESCRIPTION = "Align an AI edit, preserve unchanged areas, and optionally feather the control mask."
     SEARCH_ALIASES = ["offset repair", "edit composite", "preserve background", "change mask", "偏移修复", "图像编辑合成", "保留背景"]
 
-    def composite_edit(self, original_image, edited_image, mask_feather=0, mask=None):
+    def composite_edit(self, original_image=None, edited_image=None, mask_feather=0, mask=None):
+        # Allow this node to remain in a workflow with disconnected image inputs.
+        # Pass through whichever image is available; return a 1x1 blank image if
+        # both are disconnected so downstream nodes receive valid IMAGE/MASK data.
+        available_image = edited_image if edited_image is not None else original_image
+        if original_image is None or edited_image is None:
+            if available_image is None:
+                empty_image = torch.zeros((1, 1, 1, 3), dtype=torch.float32)
+                empty_mask = torch.zeros((1, 1, 1), dtype=torch.float32)
+                return (empty_image, empty_mask)
+            empty_mask = torch.zeros(
+                (available_image.shape[0], available_image.shape[1], available_image.shape[2]),
+                device=available_image.device,
+                dtype=available_image.dtype,
+            )
+            return (available_image, empty_mask)
+
         if cv2 is None:
             raise RuntimeError(
                 "Time Offset Repair requires OpenCV (cv2). "
                 "Install it in the ComfyUI Python environment and restart ComfyUI."
             ) from _CV2_IMPORT_ERROR
-        if original_image is None:
-            raise ValueError(
-                "原图输入为空：请确认上游图像已加载且已启用。若连接提示词三合一节点，"
-                "请打开‘图片’开关并启用对应图像；也可以直接连接 Load Image。"
-            )
-        if edited_image is None:
-            raise ValueError("编辑后图像输入为空：请将 AI 编辑结果或图像输出连接到‘编辑后图像’。")
         if original_image.ndim != 4 or original_image.shape[-1] not in (1, 3, 4):
             raise ValueError("original_image must be a ComfyUI IMAGE batch shaped [B,H,W,C].")
         if edited_image.ndim != 4 or edited_image.shape[-1] not in (1, 3, 4):
