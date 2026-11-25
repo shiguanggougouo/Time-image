@@ -102,6 +102,8 @@ Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本
 
 ## 3. Time・Panorama Viewer
 
+![全景图查看器：拖动旋转、滚轮缩放与四视角预览](docs/panorama-viewer.jpg)
+
 将等距柱状全景图接到 `全景图`，运行后可拖动预览旋转、滚轮缩放。图像输出口会输出画布当前视角对应的透视图。
 
 打开 **展开多视角** 后会显示前、右、后、左四个方向的预览卡片。点击卡片选择视角，再运行工作流，图像输出口就会得到该方向的透视图；关闭开关时输出画布当前视角。视角图默认宽边为 1024 像素，画面比例跟随查看器。批次输入会对每张图应用相同视角。
@@ -159,6 +161,8 @@ Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本
 仅加载 `.gguf` 文件，并直接使用已安装的 **GGUF Loader** 扩展。需要先安装并启用提供 `LoaderGGUF` 的 GGUF 节点。
 
 ## 8. Time・文字标签
+
+![文字标签：画布说明文字与编辑面板](docs/text-label.png)
 
 这是一个只在画布显示的说明标签，没有输入、输出或计算功能。双击文字可编辑内容（支持换行）；右键节点并选择 **文字属性…**，可以设置字号和文字颜色。文字和样式会随工作流保存。
 
@@ -272,6 +276,8 @@ Common picks: `8` or `64` for SD / SDXL latents, `14` or `28` for patch-14 style
 
 ## 3. Time・Panorama Viewer
 
+![Panorama viewer: drag to rotate, scroll to zoom, and four perspective previews](docs/panorama-viewer.jpg)
+
 Connect an equirectangular panorama to `Panorama image` and run the workflow. Drag the preview to rotate and scroll to zoom. The image output returns a perspective crop of the current viewer angle.
 
 Enable **Multi-view** to show Front, Right, Back and Left preview cards. Select a card and run the workflow to send that perspective to the image output. With the switch off, the output uses the current viewer angle. The output is 1024 pixels on its long edge and follows the viewer aspect ratio. Batches receive the same selected view.
@@ -329,6 +335,8 @@ Connect the final image, such as the `images` output of **Save Image**, to **Tri
 Loads only `.gguf` files through the installed **GGUF Loader** extension. Install and enable a GGUF node that provides `LoaderGGUF` first.
 
 ## 8. Time・Text Label
+
+![Text label: canvas caption with its edit dialog](docs/text-label.png)
 
 This is a canvas-only label with no inputs, outputs, or execution logic. Double-click the text to edit it (line breaks are supported). Right-click the node and choose **Text properties…** to adjust the font size and text color. The text and style are saved with the workflow.
 
