@@ -1,6 +1,6 @@
 [project]
 name = "time-image"
-version = "2.6.4"
+version = "2.6.5"
 description = "Eight ComfyUI utility nodes: prompt + images + resolution, image/mask alignment, panorama viewer, cache cleaner, AI-edit compositing, completion sound, GGUF UNET loader, and canvas text label."
 requires-python = ">=3.10"
 # NumPy, torch and Pillow are provided by ComfyUI. OpenCV is optional at import

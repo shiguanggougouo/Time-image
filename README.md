@@ -1,6 +1,6 @@
 # Time image
 
-Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本 **2.6.4**。下面按顺序介绍提示词、图像与分辨率节点、图像和遮罩对齐节点、全景图查看器、缓存清理器、偏移修复、完成提示音、专用 GGUF 模型加载器，以及文字标签。
+Time image 是一个包含 **八个 ComfyUI 节点** 的小套装，当前版本 **2.6.5**。下面按顺序介绍提示词、图像与分辨率节点、图像和遮罩对齐节点、全景图查看器、缓存清理器、偏移修复、完成提示音、专用 GGUF 模型加载器，以及文字标签。
 
 | 顺序 | 节点 | 适合做什么 |
 | --- | --- | --- |
@@ -176,7 +176,7 @@ MIT，见 [`LICENSE`](LICENSE)。全部为原创代码，未捆绑第三方代�
 
 # English
 
-Time image is a small pack of **eight ComfyUI nodes**, currently at version **2.6.4**. The nodes are described in order below: prompt, images and resolution; image-and-mask alignment; panorama viewer; cache cleaner; AI edit compositing; a completion chime; a dedicated GGUF loader; and a text label.
+Time image is a small pack of **eight ComfyUI nodes**, currently at version **2.6.5**. The nodes are described in order below: prompt, images and resolution; image-and-mask alignment; panorama viewer; cache cleaner; AI edit compositing; a completion chime; a dedicated GGUF loader; and a text label.
 
 | Order | Node | What it is for |
 | --- | --- | --- |
